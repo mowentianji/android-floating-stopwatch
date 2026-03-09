@@ -8,151 +8,31 @@
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:minWidth="300dp"
         android:background="@drawable/overlay_panel_bg"
         android:elevation="14dp"
-        android:orientation="vertical"
-        android:minWidth="280dp">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="悬浮秒表"
-            android:textColor="#8FA3C7"
-            android:textSize="11sp" />
-
-        <TextView
-            android:id="@+id/tvTime"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="00:00:00.000"
-            android:textColor="@color/overlay_text"
-            android:textSize="30sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvCountdown"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="距下一秒：000ms"
-            android:textColor="#6EA8FF"
-            android:textSize="12sp" />
-
-        <TextView
-            android:id="@+id/tvSyncStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:text="网络校时：未同步"
-            android:textColor="@color/overlay_text"
-            android:textSize="13sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/tvSources"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="参考源：未同步"
-            android:textColor="@color/overlay_subtext"
-            android:textSize="11sp" />
-
-        <TextView
-            android:id="@+id/tvAllSources"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="全部源：未同步"
-            android:textColor="@color/overlay_subtext"
-            android:textSize="10sp" />
-
-        <TextView
-            android:id="@+id/tvMode"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:text="模式：自动最快源"
-            android:textColor="#8FA3C7"
-            android:textSize="11sp" />
+        android:orientation="vertical">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
-            <Button
-                android:id="@+id/btnStartPause"
+            <TextView
+                android:id="@+id/tvPageTitle"
                 android:layout_width="0dp"
-                android:layout_height="40dp"
+                android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:background="@drawable/overlay_button_primary"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:minWidth="0dp"
-                android:text="校准"
-                android:textAllCaps="false"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp" />
-
-            <Button
-                android:id="@+id/btnCycleMode"
-                android:layout_width="0dp"
-                android:layout_height="40dp"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:background="@drawable/overlay_button_secondary"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:minWidth="0dp"
-                android:text="切模式"
-                android:textAllCaps="false"
-                android:textColor="#E5EDFF"
-                android:textSize="13sp" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btnReset"
-                android:layout_width="0dp"
-                android:layout_height="36dp"
-                android:layout_weight="1"
-                android:background="@drawable/overlay_button_secondary"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:minWidth="0dp"
-                android:text="清零"
-                android:textAllCaps="false"
-                android:textColor="#E5EDFF"
-                android:textSize="12sp" />
-
-            <Button
-                android:id="@+id/btnAutoSync"
-                android:layout_width="0dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1.4"
-                android:background="@drawable/overlay_button_secondary"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:minWidth="0dp"
-                android:text="自动校准"
-                android:textAllCaps="false"
-                android:textColor="#E5EDFF"
-                android:textSize="12sp" />
+                android:text="悬浮秒表"
+                android:textColor="@color/overlay_text"
+                android:textSize="18sp"
+                android:textStyle="bold" />
 
             <Button
                 android:id="@+id/btnClose"
-                android:layout_width="0dp"
-                android:layout_height="36dp"
-                android:layout_marginStart="8dp"
-                android:layout_weight="0.8"
+                android:layout_width="64dp"
+                android:layout_height="32dp"
                 android:background="@drawable/overlay_button_secondary"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
@@ -160,6 +40,268 @@
                 android:text="关闭"
                 android:textAllCaps="false"
                 android:textColor="#FFB4B4"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/pageStopwatch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="当前激活页面，用于配置悬浮秒表的核心功能"
+                android:textColor="#8FA3C7"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/tvTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="00:00:00.000"
+                android:textColor="@color/overlay_text"
+                android:textSize="30sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvCountdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="距下一秒：000ms"
+                android:textColor="#6EA8FF"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/tvSyncStatus"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="网络校时：未同步"
+                android:textColor="@color/overlay_text"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvSources"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="参考源：未同步"
+                android:textColor="@color/overlay_subtext"
+                android:textSize="11sp" />
+
+            <TextView
+                android:id="@+id/tvAllSources"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:text="全部源：未同步"
+                android:textColor="@color/overlay_subtext"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/tvMode"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="模式：自动最快源"
+                android:textColor="#8FA3C7"
+                android:textSize="11sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnStartPause"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/overlay_button_primary"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:text="校准"
+                    android:textAllCaps="false"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp" />
+
+                <Button
+                    android:id="@+id/btnCycleMode"
+                    android:layout_width="0dp"
+                    android:layout_height="40dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/overlay_button_secondary"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:text="切模式"
+                    android:textAllCaps="false"
+                    android:textColor="#E5EDFF"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/btnReset"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/overlay_button_secondary"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:text="清零"
+                    android:textAllCaps="false"
+                    android:textColor="#E5EDFF"
+                    android:textSize="12sp" />
+
+                <Button
+                    android:id="@+id/btnAutoSync"
+                    android:layout_width="0dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1.4"
+                    android:background="@drawable/overlay_button_secondary"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:minWidth="0dp"
+                    android:text="自动校准"
+                    android:textAllCaps="false"
+                    android:textColor="#E5EDFF"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/pageAutoClicker"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="自动点击器"
+                android:textColor="@color/overlay_text"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="切换至自动点击功能页面（可实现模拟点击操作）"
+                android:textColor="@color/overlay_subtext"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvAutoClickerHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="当前为页面骨架版，后续可继续接入点击坐标、频率和启动/停止逻辑。"
+                android:textColor="#8FA3C7"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/pageProfile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="我的"
+                android:textColor="@color/overlay_text"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="切换至个人中心页面（包含账号、设置、帮助等入口）"
+                android:textColor="@color/overlay_subtext"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvProfileHint"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="当前为页面骨架版，后续可继续接入账号信息、设置页和帮助入口。"
+                android:textColor="#8FA3C7"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="14dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnTabStopwatch"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_weight="1"
+                android:background="@drawable/overlay_button_primary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:text="悬浮秒表"
+                android:textAllCaps="false"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnTabAutoClicker"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:background="@drawable/overlay_button_secondary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:text="自动点击器"
+                android:textAllCaps="false"
+                android:textColor="#E5EDFF"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnTabProfile"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:background="@drawable/overlay_button_secondary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:text="我的"
+                android:textAllCaps="false"
+                android:textColor="#E5EDFF"
                 android:textSize="12sp" />
         </LinearLayout>
 

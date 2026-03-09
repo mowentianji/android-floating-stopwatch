@@ -17,6 +17,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.Button
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.example.floatingstopwatch.databinding.OverlayStopwatchBinding
@@ -37,6 +38,12 @@ class FloatingStopwatchService : Service() {
         TMALL("天猫优先")
     }
 
+    private enum class OverlayPage(val title: String) {
+        STOPWATCH("悬浮秒表"),
+        AUTO_CLICKER("自动点击器"),
+        PROFILE("我的")
+    }
+
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
     private var binding: OverlayStopwatchBinding? = null
@@ -51,6 +58,7 @@ class FloatingStopwatchService : Service() {
     private val autoSyncIntervalMs = 5000L
     private var syncInFlight = false
     private var syncMode = SyncMode.AUTO
+    private var currentPage = OverlayPage.STOPWATCH
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -120,6 +128,7 @@ class FloatingStopwatchService : Service() {
             }
             setupButtons()
             setupDrag(view, params)
+            showPage(currentPage)
             updateTime()
             windowManager.addView(view, params)
             overlayView = view
@@ -142,7 +151,34 @@ class FloatingStopwatchService : Service() {
         }
         binding?.btnAutoSync?.setOnClickListener { toggleAutoSync() }
         binding?.btnClose?.setOnClickListener { stopSelf() }
+        binding?.btnTabStopwatch?.setOnClickListener { showPage(OverlayPage.STOPWATCH) }
+        binding?.btnTabAutoClicker?.setOnClickListener { showPage(OverlayPage.AUTO_CLICKER) }
+        binding?.btnTabProfile?.setOnClickListener { showPage(OverlayPage.PROFILE) }
         renderAutoSyncButton()
+        renderTabButtons()
+    }
+
+    private fun showPage(page: OverlayPage) {
+        currentPage = page
+        binding?.pageStopwatch?.visibility = if (page == OverlayPage.STOPWATCH) View.VISIBLE else View.GONE
+        binding?.pageAutoClicker?.visibility = if (page == OverlayPage.AUTO_CLICKER) View.VISIBLE else View.GONE
+        binding?.pageProfile?.visibility = if (page == OverlayPage.PROFILE) View.VISIBLE else View.GONE
+        binding?.tvPageTitle?.text = page.title
+        renderTabButtons()
+    }
+
+    private fun renderTabButtons() {
+        val activeBg = R.drawable.overlay_button_primary
+        val inactiveBg = R.drawable.overlay_button_secondary
+        renderTabButton(binding?.btnTabStopwatch, currentPage == OverlayPage.STOPWATCH, activeBg, inactiveBg)
+        renderTabButton(binding?.btnTabAutoClicker, currentPage == OverlayPage.AUTO_CLICKER, activeBg, inactiveBg)
+        renderTabButton(binding?.btnTabProfile, currentPage == OverlayPage.PROFILE, activeBg, inactiveBg)
+    }
+
+    private fun renderTabButton(button: Button?, active: Boolean, activeBg: Int, inactiveBg: Int) {
+        button ?: return
+        button.setBackgroundResource(if (active) activeBg else inactiveBg)
+        button.setTextColor(if (active) 0xFFFFFFFF.toInt() else 0xFFE5EDFF.toInt())
     }
 
     private fun cycleMode() {
