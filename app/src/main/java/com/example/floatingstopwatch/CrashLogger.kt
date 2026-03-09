@@ -26,6 +26,10 @@ object CrashLogger {
         }
     }
 
+    fun recordNow(context: Context, thread: Thread, throwable: Throwable) {
+        writeCrash(context, thread, throwable)
+    }
+
     private fun writeCrash(context: Context, thread: Thread, throwable: Throwable) {
         val ts = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
         val fileName = "floating_stopwatch_crash_$ts.txt"

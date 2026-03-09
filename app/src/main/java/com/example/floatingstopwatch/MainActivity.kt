@@ -17,6 +17,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        renderLastError()
 
         binding.btnRequestPermission.setOnClickListener {
             requestOverlayPermission()
@@ -24,16 +25,42 @@ class MainActivity : AppCompatActivity() {
 
         binding.btnStartOverlay.setOnClickListener {
             if (!Settings.canDrawOverlays(this)) {
-                Toast.makeText(this, "请先授予悬浮窗权限", Toast.LENGTH_SHORT).show()
+                val msg = "请先授予悬浮窗权限"
+                ErrorStore.save(this, msg)
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                renderLastError()
                 requestOverlayPermission()
                 return@setOnClickListener
             }
-            val intent = Intent(this, FloatingStopwatchService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
+            try {
+                val intent = Intent(this, FloatingStopwatchService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+                ErrorStore.clear(this)
+                renderLastError()
+            } catch (t: Throwable) {
+                val msg = "启动失败: ${t.javaClass.simpleName}: ${t.message ?: "unknown"}"
+                ErrorStore.save(this, msg)
+                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+                renderLastError()
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        renderLastError()
+    }
+
+    private fun renderLastError() {
+        val last = ErrorStore.get(this)
+        binding.tvLastError.text = if (last.isNullOrBlank()) {
+            "最近错误：无"
+        } else {
+            "最近错误：$last"
         }
     }
 

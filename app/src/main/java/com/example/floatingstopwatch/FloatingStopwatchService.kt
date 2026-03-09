@@ -18,6 +18,7 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.example.floatingstopwatch.databinding.OverlayStopwatchBinding
 import java.util.Locale
@@ -36,7 +37,7 @@ class FloatingStopwatchService : Service() {
     private val ticker = object : Runnable {
         override fun run() {
             updateTime()
-            handler.postDelayed(this, 30)
+            handler.postDelayed(this, 50)
         }
     }
 
@@ -44,57 +45,71 @@ class FloatingStopwatchService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        startForeground(NOTIFICATION_ID, buildNotification())
-        showOverlay()
+        try {
+            startForeground(NOTIFICATION_ID, buildNotification())
+            showOverlaySafely()
+            ErrorStore.clear(this)
+        } catch (t: Throwable) {
+            failGracefully("服务启动失败", t)
+        }
     }
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
-        overlayView?.let { windowManager.removeView(it) }
+        runCatching {
+            overlayView?.let { windowManager.removeView(it) }
+        }
         overlayView = null
         binding = null
         super.onDestroy()
     }
 
-    private fun showOverlay() {
-        if (overlayView != null) return
+    private fun showOverlaySafely() {
+        try {
+            if (overlayView != null) return
 
-        windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
-        binding = OverlayStopwatchBinding.inflate(LayoutInflater.from(this))
-        val view = binding!!.root
+            windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
+            binding = OverlayStopwatchBinding.inflate(LayoutInflater.from(this))
+            val view = binding!!.root
 
-        val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        } else {
-            WindowManager.LayoutParams.TYPE_PHONE
+            val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            }
+
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                layoutType,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                x = 120
+                y = 220
+            }
+
+            setupButtons()
+            setupDrag(view, params)
+            updateTime()
+
+            windowManager.addView(view, params)
+            overlayView = view
+        } catch (t: Throwable) {
+            failGracefully("悬浮窗创建失败", t)
         }
-
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            layoutType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = 120
-            y = 220
-        }
-
-        setupButtons()
-        setupDrag(view, params)
-        updateTime()
-
-        windowManager.addView(view, params)
-        overlayView = view
     }
 
     private fun setupButtons() {
         binding?.btnStartPause?.setOnClickListener {
-            if (isRunning) pause() else startOrResume()
+            runCatching {
+                if (isRunning) pause() else startOrResume()
+            }.onFailure { failSoftly("计时按钮异常", it) }
         }
         binding?.btnReset?.setOnClickListener {
-            reset()
+            runCatching { reset() }.onFailure { failSoftly("重置异常", it) }
         }
         binding?.btnClose?.setOnClickListener {
             stopSelf()
@@ -117,9 +132,11 @@ class FloatingStopwatchService : Service() {
                     false
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = initialX + (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(view, params)
+                    runCatching {
+                        params.x = initialX + (event.rawX - initialTouchX).toInt()
+                        params.y = initialY + (event.rawY - initialTouchY).toInt()
+                        windowManager.updateViewLayout(view, params)
+                    }
                     true
                 }
                 else -> false
@@ -182,7 +199,7 @@ class FloatingStopwatchService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(getString(R.string.notification_text))
-            .setSmallIcon(android.R.drawable.ic_media_play)
+            .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
             .build()
@@ -197,6 +214,21 @@ class FloatingStopwatchService : Service() {
         )
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
+    }
+
+    private fun failGracefully(prefix: String, t: Throwable) {
+        val msg = "$prefix: ${t.javaClass.simpleName}: ${t.message ?: "unknown"}"
+        ErrorStore.save(this, msg)
+        CrashLogger.recordNow(this, Thread.currentThread(), t)
+        Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+        stopSelf()
+    }
+
+    private fun failSoftly(prefix: String, t: Throwable) {
+        val msg = "$prefix: ${t.javaClass.simpleName}: ${t.message ?: "unknown"}"
+        ErrorStore.save(this, msg)
+        CrashLogger.recordNow(this, Thread.currentThread(), t)
+        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
     companion object {
