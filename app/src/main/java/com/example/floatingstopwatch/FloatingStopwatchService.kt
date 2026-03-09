@@ -25,8 +25,8 @@ import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 import kotlin.concurrent.thread
+import kotlin.math.abs
 
 class FloatingStopwatchService : Service() {
 
@@ -38,6 +38,7 @@ class FloatingStopwatchService : Service() {
     private val timeFormatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
     private var networkOffsetMs = 0L
     private var lastSyncLabel = "未同步"
+    private var sourceSummary = "未同步"
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -45,6 +46,13 @@ class FloatingStopwatchService : Service() {
             handler.postDelayed(this, 16)
         }
     }
+
+    data class TimeProbeResult(
+        val name: String,
+        val url: String,
+        val offsetMs: Long,
+        val roundTripMs: Long
+    )
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -115,6 +123,7 @@ class FloatingStopwatchService : Service() {
         binding?.btnReset?.setOnClickListener {
             networkOffsetMs = 0L
             lastSyncLabel = "未同步"
+            sourceSummary = "未同步"
             updateTime()
             Toast.makeText(this, "已清零网络偏移", Toast.LENGTH_SHORT).show()
         }
@@ -154,19 +163,22 @@ class FloatingStopwatchService : Service() {
     private fun syncNetworkTime() {
         binding?.btnStartPause?.isEnabled = false
         binding?.tvSyncStatus?.text = "网络校时：同步中..."
+        binding?.tvSources?.text = "参考源：同步中..."
 
         thread(name = "network-time-sync") {
-            val result = runCatching { fetchNetworkOffset() }
+            val result = runCatching { fetchBestNetworkOffset() }
             handler.post {
                 binding?.btnStartPause?.isEnabled = true
-                result.onSuccess { offset ->
-                    networkOffsetMs = offset
-                    lastSyncLabel = if (offset >= 0) "+${offset}ms" else "${offset}ms"
+                result.onSuccess { best ->
+                    networkOffsetMs = best.offsetMs
+                    lastSyncLabel = if (best.offsetMs >= 0) "+${best.offsetMs}ms" else "${best.offsetMs}ms"
+                    sourceSummary = buildSourceSummary(best)
                     updateTime()
-                    Toast.makeText(this, "校时完成：$lastSyncLabel", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "校时完成：${best.name} ${lastSyncLabel}", Toast.LENGTH_SHORT).show()
                 }.onFailure {
                     val msg = "校时失败: ${it.javaClass.simpleName}"
                     lastSyncLabel = msg
+                    sourceSummary = msg
                     updateTime()
                     Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
                 }
@@ -174,44 +186,71 @@ class FloatingStopwatchService : Service() {
         }
     }
 
-    private fun fetchNetworkOffset(): Long {
-        val urls = listOf(
-            "https://www.baidu.com",
-            "https://www.qq.com",
-            "https://www.cloudflare.com"
+    private fun fetchBestNetworkOffset(): TimeProbeResult {
+        val probes = listOf(
+            "京东" to "https://www.jd.com",
+            "淘宝" to "https://www.taobao.com",
+            "天猫" to "https://www.tmall.com",
+            "百度" to "https://www.baidu.com",
+            "QQ" to "https://www.qq.com",
+            "Cloudflare" to "https://www.cloudflare.com"
         )
+
+        val success = mutableListOf<TimeProbeResult>()
         val errors = mutableListOf<String>()
 
-        for (url in urls) {
+        for ((name, url) in probes) {
             try {
-                val start = System.currentTimeMillis()
-                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-                    requestMethod = "HEAD"
-                    connectTimeout = 5000
-                    readTimeout = 5000
-                    instanceFollowRedirects = true
-                    connect()
-                }
-                val serverTime = conn.date
-                val end = System.currentTimeMillis()
-                conn.disconnect()
-                if (serverTime > 0) {
-                    val midpoint = (start + end) / 2
-                    return serverTime - midpoint
-                }
-                errors += "$url:no-date"
+                success += probeTime(name, url)
             } catch (t: Throwable) {
-                errors += "$url:${t.javaClass.simpleName}"
+                errors += "$name:${t.javaClass.simpleName}"
             }
         }
-        throw IllegalStateException(errors.joinToString(" | "))
+
+        if (success.isEmpty()) {
+            throw IllegalStateException(errors.joinToString(" | "))
+        }
+
+        return success.minByOrNull { it.roundTripMs }!!
+    }
+
+    private fun probeTime(name: String, url: String): TimeProbeResult {
+        val start = System.currentTimeMillis()
+        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+            requestMethod = "HEAD"
+            connectTimeout = 5000
+            readTimeout = 5000
+            instanceFollowRedirects = true
+            connect()
+        }
+        val serverTime = conn.date
+        val end = System.currentTimeMillis()
+        conn.disconnect()
+        if (serverTime <= 0L) error("no-date")
+        val midpoint = (start + end) / 2
+        return TimeProbeResult(
+            name = name,
+            url = url,
+            offsetMs = serverTime - midpoint,
+            roundTripMs = end - start
+        )
+    }
+
+    private fun buildSourceSummary(best: TimeProbeResult): String {
+        val offsetText = if (best.offsetMs >= 0) "+${best.offsetMs}ms" else "${best.offsetMs}ms"
+        val netText = if (abs(best.roundTripMs) >= 1000) {
+            String.format(Locale.getDefault(), "%.2fs", best.roundTripMs / 1000f)
+        } else {
+            "${best.roundTripMs}ms"
+        }
+        return "${best.name} ${offsetText} / RTT ${netText}"
     }
 
     private fun updateTime() {
-        val now = System.currentTimeMillis()
-        val adjusted = now + networkOffsetMs
+        val adjusted = System.currentTimeMillis() + networkOffsetMs
         binding?.tvTime?.text = timeFormatter.format(Date(adjusted))
         binding?.tvSyncStatus?.text = "网络校时：$lastSyncLabel"
+        binding?.tvSources?.text = "参考源：$sourceSummary"
     }
 
     private fun buildNotification(): Notification {
