@@ -10,6 +10,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -21,24 +22,31 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Prepare Android SDK command-line tools
+        run: |
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          cd "$ANDROID_SDK_ROOT/cmdline-tools"
+          curl -fsSL -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools.zip
+          mv cmdline-tools latest
+          rm -f commandlinetools.zip
+          echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" >> $GITHUB_PATH
 
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses || true
 
       - name: Install required Android SDK packages
         run: |
-          sdkmanager \
+          sdkmanager --install \
             "platform-tools" \
             "platforms;android-34" \
             "build-tools;34.0.0"
 
       - name: Build debug APK
-        run: gradle assembleDebug
+        run: gradle assembleDebug --no-daemon
 
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
