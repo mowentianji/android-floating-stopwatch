@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Floating Stopwatch</string>
+    <string name="notification_channel_name">Floating Stopwatch</string>
+    <string name="notification_text">悬浮秒表正在运行</string>
+</resources>
