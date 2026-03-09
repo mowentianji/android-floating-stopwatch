@@ -6,8 +6,8 @@
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:background="@android:color/white"
-        android:elevation="8dp"
+        android:background="@color/overlay_bg"
+        android:elevation="10dp"
         android:orientation="vertical"
         android:padding="10dp">
 
@@ -16,7 +16,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="00:00:00.000"
-            android:textColor="@android:color/black"
+            android:textColor="@color/overlay_text"
             android:textSize="26sp"
             android:textStyle="bold" />
 
@@ -25,7 +25,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="距下一秒：000ms"
-            android:textColor="@android:color/black"
+            android:textColor="@color/overlay_accent"
             android:textSize="12sp" />
 
         <TextView
@@ -34,7 +34,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:text="模式：自动最快源"
-            android:textColor="@android:color/black"
+            android:textColor="@color/overlay_subtext"
             android:textSize="12sp" />
 
         <TextView
@@ -43,7 +43,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:text="网络校时：未同步"
-            android:textColor="@android:color/black"
+            android:textColor="@color/overlay_subtext"
             android:textSize="11sp" />
 
         <TextView
@@ -52,7 +52,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:text="参考源：未同步"
-            android:textColor="@android:color/black"
+            android:textColor="@color/overlay_subtext"
             android:textSize="10sp" />
 
         <TextView
@@ -62,7 +62,7 @@
             android:layout_marginTop="4dp"
             android:maxWidth="260dp"
             android:text="全部源：未同步"
-            android:textColor="@android:color/black"
+            android:textColor="@color/overlay_subtext"
             android:textSize="9sp" />
 
         <LinearLayout

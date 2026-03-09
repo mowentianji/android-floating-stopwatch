@@ -1,4 +1,10 @@
 <resources>
     <color name="purple_500">#6750A4</color>
     <color name="white">#FFFFFF</color>
+    <color name="overlay_bg">#CC111827</color>
+    <color name="overlay_text">#F9FAFB</color>
+    <color name="overlay_subtext">#CBD5E1</color>
+    <color name="overlay_accent">#60A5FA</color>
+    <color name="page_bg">#F3F4F6</color>
+    <color name="page_card">#FFFFFF</color>
 </resources>
