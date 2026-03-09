@@ -11,6 +11,7 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -40,7 +41,7 @@ class FloatingStopwatchService : Service() {
     private var overlayView: View? = null
     private var binding: OverlayStopwatchBinding? = null
 
-    private val handler = Handler(mainLooper)
+    private val handler by lazy { Handler(Looper.getMainLooper()) }
     private val timeFormatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
     private var networkOffsetMs = 0L
     private var lastSyncLabel = "未同步"
