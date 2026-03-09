@@ -39,11 +39,24 @@ class FloatingStopwatchService : Service() {
     private var networkOffsetMs = 0L
     private var lastSyncLabel = "未同步"
     private var sourceSummary = "未同步"
+    private var allSourceSummary = "未同步"
+    private var autoSyncEnabled = false
+    private val autoSyncIntervalMs = 5000L
+    private var syncInFlight = false
 
     private val ticker = object : Runnable {
         override fun run() {
             updateTime()
             handler.postDelayed(this, 16)
+        }
+    }
+
+    private val autoSyncRunnable = object : Runnable {
+        override fun run() {
+            if (autoSyncEnabled) {
+                syncNetworkTime(autoTriggered = true)
+                handler.postDelayed(this, autoSyncIntervalMs)
+            }
         }
     }
 
@@ -118,17 +131,42 @@ class FloatingStopwatchService : Service() {
 
     private fun setupButtons() {
         binding?.btnStartPause?.setOnClickListener {
-            syncNetworkTime()
+            syncNetworkTime(autoTriggered = false)
         }
         binding?.btnReset?.setOnClickListener {
             networkOffsetMs = 0L
             lastSyncLabel = "未同步"
             sourceSummary = "未同步"
+            allSourceSummary = "未同步"
             updateTime()
             Toast.makeText(this, "已清零网络偏移", Toast.LENGTH_SHORT).show()
         }
+        binding?.btnAutoSync?.setOnClickListener {
+            toggleAutoSync()
+        }
         binding?.btnClose?.setOnClickListener {
             stopSelf()
+        }
+        renderAutoSyncButton()
+    }
+
+    private fun toggleAutoSync() {
+        autoSyncEnabled = !autoSyncEnabled
+        handler.removeCallbacks(autoSyncRunnable)
+        if (autoSyncEnabled) {
+            handler.post(autoSyncRunnable)
+            Toast.makeText(this, "已开启自动校时", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "已关闭自动校时", Toast.LENGTH_SHORT).show()
+        }
+        renderAutoSyncButton()
+    }
+
+    private fun renderAutoSyncButton() {
+        binding?.btnAutoSync?.text = if (autoSyncEnabled) {
+            "关闭自动校时(5秒)"
+        } else {
+            "开启自动校时(5秒)"
         }
     }
 
@@ -160,33 +198,44 @@ class FloatingStopwatchService : Service() {
         }
     }
 
-    private fun syncNetworkTime() {
+    private fun syncNetworkTime(autoTriggered: Boolean) {
+        if (syncInFlight) return
+        syncInFlight = true
         binding?.btnStartPause?.isEnabled = false
-        binding?.tvSyncStatus?.text = "网络校时：同步中..."
+        binding?.tvSyncStatus?.text = if (autoTriggered) "网络校时：自动同步中..." else "网络校时：同步中..."
         binding?.tvSources?.text = "参考源：同步中..."
+        binding?.tvAllSources?.text = "全部源：同步中..."
 
         thread(name = "network-time-sync") {
             val result = runCatching { fetchBestNetworkOffset() }
             handler.post {
+                syncInFlight = false
                 binding?.btnStartPause?.isEnabled = true
-                result.onSuccess { best ->
+                result.onSuccess { allResults ->
+                    val best = allResults.minByOrNull { it.roundTripMs }!!
                     networkOffsetMs = best.offsetMs
                     lastSyncLabel = if (best.offsetMs >= 0) "+${best.offsetMs}ms" else "${best.offsetMs}ms"
                     sourceSummary = buildSourceSummary(best)
+                    allSourceSummary = buildAllSourcesSummary(allResults)
                     updateTime()
-                    Toast.makeText(this, "校时完成：${best.name} ${lastSyncLabel}", Toast.LENGTH_SHORT).show()
+                    if (!autoTriggered) {
+                        Toast.makeText(this, "校时完成：${best.name} ${lastSyncLabel}", Toast.LENGTH_SHORT).show()
+                    }
                 }.onFailure {
                     val msg = "校时失败: ${it.javaClass.simpleName}"
                     lastSyncLabel = msg
                     sourceSummary = msg
+                    allSourceSummary = msg
                     updateTime()
-                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                    if (!autoTriggered) {
+                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
     }
 
-    private fun fetchBestNetworkOffset(): TimeProbeResult {
+    private fun fetchBestNetworkOffset(): List<TimeProbeResult> {
         val probes = listOf(
             "京东" to "https://www.jd.com",
             "淘宝" to "https://www.taobao.com",
@@ -211,7 +260,7 @@ class FloatingStopwatchService : Service() {
             throw IllegalStateException(errors.joinToString(" | "))
         }
 
-        return success.minByOrNull { it.roundTripMs }!!
+        return success.sortedBy { it.roundTripMs }
     }
 
     private fun probeTime(name: String, url: String): TimeProbeResult {
@@ -238,12 +287,23 @@ class FloatingStopwatchService : Service() {
 
     private fun buildSourceSummary(best: TimeProbeResult): String {
         val offsetText = if (best.offsetMs >= 0) "+${best.offsetMs}ms" else "${best.offsetMs}ms"
-        val netText = if (abs(best.roundTripMs) >= 1000) {
-            String.format(Locale.getDefault(), "%.2fs", best.roundTripMs / 1000f)
-        } else {
-            "${best.roundTripMs}ms"
-        }
+        val netText = formatRtt(best.roundTripMs)
         return "${best.name} ${offsetText} / RTT ${netText}"
+    }
+
+    private fun buildAllSourcesSummary(results: List<TimeProbeResult>): String {
+        return results.joinToString(" | ") {
+            val offsetText = if (it.offsetMs >= 0) "+${it.offsetMs}ms" else "${it.offsetMs}ms"
+            "${it.name} ${offsetText} ${formatRtt(it.roundTripMs)}"
+        }
+    }
+
+    private fun formatRtt(rtt: Long): String {
+        return if (abs(rtt) >= 1000) {
+            String.format(Locale.getDefault(), "%.2fs", rtt / 1000f)
+        } else {
+            "${rtt}ms"
+        }
     }
 
     private fun updateTime() {
@@ -251,6 +311,8 @@ class FloatingStopwatchService : Service() {
         binding?.tvTime?.text = timeFormatter.format(Date(adjusted))
         binding?.tvSyncStatus?.text = "网络校时：$lastSyncLabel"
         binding?.tvSources?.text = "参考源：$sourceSummary"
+        binding?.tvAllSources?.text = "全部源：$allSourceSummary"
+        renderAutoSyncButton()
     }
 
     private fun buildNotification(): Notification {
