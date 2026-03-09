@@ -11,10 +11,19 @@
         android:id="@+id/tvTime"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="00:00.00"
+        android:text="00:00:00.000"
         android:textColor="@android:color/black"
         android:textSize="24sp"
         android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvSyncStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="网络校时：未同步"
+        android:textColor="@android:color/black"
+        android:textSize="12sp" />
 
     <LinearLayout
         android:layout_width="wrap_content"
@@ -26,14 +35,14 @@
             android:id="@+id/btnStartPause"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="开始" />
+            android:text="校时" />
 
         <Button
             android:id="@+id/btnReset"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
-            android:text="重置" />
+            android:text="清零偏移" />
     </LinearLayout>
 
     <Button

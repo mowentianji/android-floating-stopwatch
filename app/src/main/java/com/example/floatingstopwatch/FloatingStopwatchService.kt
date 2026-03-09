@@ -12,7 +12,6 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import android.os.SystemClock
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -21,7 +20,13 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.example.floatingstopwatch.databinding.OverlayStopwatchBinding
+import java.net.HttpURLConnection
+import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
+import java.util.TimeZone
+import kotlin.concurrent.thread
 
 class FloatingStopwatchService : Service() {
 
@@ -30,14 +35,14 @@ class FloatingStopwatchService : Service() {
     private var binding: OverlayStopwatchBinding? = null
 
     private val handler = Handler(Looper.getMainLooper())
-    private var baseElapsed = 0L
-    private var startedAt = 0L
-    private var isRunning = false
+    private val timeFormatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
+    private var networkOffsetMs = 0L
+    private var lastSyncLabel = "未同步"
 
     private val ticker = object : Runnable {
         override fun run() {
             updateTime()
-            handler.postDelayed(this, 50)
+            handler.postDelayed(this, 16)
         }
     }
 
@@ -97,6 +102,7 @@ class FloatingStopwatchService : Service() {
 
             windowManager.addView(view, params)
             overlayView = view
+            handler.post(ticker)
         } catch (t: Throwable) {
             failGracefully("悬浮窗创建失败", t)
         }
@@ -104,12 +110,13 @@ class FloatingStopwatchService : Service() {
 
     private fun setupButtons() {
         binding?.btnStartPause?.setOnClickListener {
-            runCatching {
-                if (isRunning) pause() else startOrResume()
-            }.onFailure { failSoftly("计时按钮异常", it) }
+            syncNetworkTime()
         }
         binding?.btnReset?.setOnClickListener {
-            runCatching { reset() }.onFailure { failSoftly("重置异常", it) }
+            networkOffsetMs = 0L
+            lastSyncLabel = "未同步"
+            updateTime()
+            Toast.makeText(this, "已清零网络偏移", Toast.LENGTH_SHORT).show()
         }
         binding?.btnClose?.setOnClickListener {
             stopSelf()
@@ -144,46 +151,67 @@ class FloatingStopwatchService : Service() {
         }
     }
 
-    private fun startOrResume() {
-        if (isRunning) return
-        startedAt = SystemClock.elapsedRealtime()
-        isRunning = true
-        binding?.btnStartPause?.text = "暂停"
-        handler.post(ticker)
-    }
+    private fun syncNetworkTime() {
+        binding?.btnStartPause?.isEnabled = false
+        binding?.tvSyncStatus?.text = "网络校时：同步中..."
 
-    private fun pause() {
-        if (!isRunning) return
-        baseElapsed += SystemClock.elapsedRealtime() - startedAt
-        isRunning = false
-        binding?.btnStartPause?.text = if (baseElapsed == 0L) "开始" else "继续"
-        handler.removeCallbacks(ticker)
-        updateTime()
-    }
-
-    private fun reset() {
-        isRunning = false
-        baseElapsed = 0L
-        startedAt = 0L
-        binding?.btnStartPause?.text = "开始"
-        handler.removeCallbacks(ticker)
-        updateTime()
-    }
-
-    private fun currentElapsed(): Long {
-        return if (isRunning) {
-            baseElapsed + (SystemClock.elapsedRealtime() - startedAt)
-        } else {
-            baseElapsed
+        thread(name = "network-time-sync") {
+            val result = runCatching { fetchNetworkOffset() }
+            handler.post {
+                binding?.btnStartPause?.isEnabled = true
+                result.onSuccess { offset ->
+                    networkOffsetMs = offset
+                    lastSyncLabel = if (offset >= 0) "+${offset}ms" else "${offset}ms"
+                    updateTime()
+                    Toast.makeText(this, "校时完成：$lastSyncLabel", Toast.LENGTH_SHORT).show()
+                }.onFailure {
+                    val msg = "校时失败: ${it.javaClass.simpleName}"
+                    lastSyncLabel = msg
+                    updateTime()
+                    Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
+    private fun fetchNetworkOffset(): Long {
+        val urls = listOf(
+            "https://www.baidu.com",
+            "https://www.qq.com",
+            "https://www.cloudflare.com"
+        )
+        val errors = mutableListOf<String>()
+
+        for (url in urls) {
+            try {
+                val start = System.currentTimeMillis()
+                val conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                    requestMethod = "HEAD"
+                    connectTimeout = 5000
+                    readTimeout = 5000
+                    instanceFollowRedirects = true
+                    connect()
+                }
+                val serverTime = conn.date
+                val end = System.currentTimeMillis()
+                conn.disconnect()
+                if (serverTime > 0) {
+                    val midpoint = (start + end) / 2
+                    return serverTime - midpoint
+                }
+                errors += "$url:no-date"
+            } catch (t: Throwable) {
+                errors += "$url:${t.javaClass.simpleName}"
+            }
+        }
+        throw IllegalStateException(errors.joinToString(" | "))
+    }
+
     private fun updateTime() {
-        val elapsed = currentElapsed()
-        val minutes = elapsed / 60000
-        val seconds = (elapsed % 60000) / 1000
-        val centiseconds = (elapsed % 1000) / 10
-        binding?.tvTime?.text = String.format(Locale.getDefault(), "%02d:%02d.%02d", minutes, seconds, centiseconds)
+        val now = System.currentTimeMillis()
+        val adjusted = now + networkOffsetMs
+        binding?.tvTime?.text = timeFormatter.format(Date(adjusted))
+        binding?.tvSyncStatus?.text = "网络校时：$lastSyncLabel"
     }
 
     private fun buildNotification(): Notification {
@@ -222,13 +250,6 @@ class FloatingStopwatchService : Service() {
         CrashLogger.recordNow(this, Thread.currentThread(), t)
         Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
         stopSelf()
-    }
-
-    private fun failSoftly(prefix: String, t: Throwable) {
-        val msg = "$prefix: ${t.javaClass.simpleName}: ${t.message ?: "unknown"}"
-        ErrorStore.save(this, msg)
-        CrashLogger.recordNow(this, Thread.currentThread(), t)
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
 
     companion object {
