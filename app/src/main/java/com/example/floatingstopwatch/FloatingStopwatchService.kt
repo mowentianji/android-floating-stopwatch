@@ -11,7 +11,6 @@ import android.graphics.PixelFormat
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -30,11 +29,18 @@ import kotlin.math.abs
 
 class FloatingStopwatchService : Service() {
 
+    private enum class SyncMode(val label: String) {
+        AUTO("自动最快源"),
+        JD("京东优先"),
+        TAOBAO("淘宝优先"),
+        TMALL("天猫优先")
+    }
+
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
     private var binding: OverlayStopwatchBinding? = null
 
-    private val handler = Handler(Looper.getMainLooper())
+    private val handler = Handler(mainLooper)
     private val timeFormatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
     private var networkOffsetMs = 0L
     private var lastSyncLabel = "未同步"
@@ -43,6 +49,7 @@ class FloatingStopwatchService : Service() {
     private var autoSyncEnabled = false
     private val autoSyncIntervalMs = 5000L
     private var syncInFlight = false
+    private var syncMode = SyncMode.AUTO
 
     private val ticker = object : Runnable {
         override fun run() {
@@ -82,9 +89,7 @@ class FloatingStopwatchService : Service() {
 
     override fun onDestroy() {
         handler.removeCallbacksAndMessages(null)
-        runCatching {
-            overlayView?.let { windowManager.removeView(it) }
-        }
+        runCatching { overlayView?.let { windowManager.removeView(it) } }
         overlayView = null
         binding = null
         super.onDestroy()
@@ -93,18 +98,14 @@ class FloatingStopwatchService : Service() {
     private fun showOverlaySafely() {
         try {
             if (overlayView != null) return
-
             windowManager = getSystemService(WINDOW_SERVICE) as WindowManager
             binding = OverlayStopwatchBinding.inflate(LayoutInflater.from(this))
             val view = binding!!.root
-
             val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
-                @Suppress("DEPRECATION")
-                WindowManager.LayoutParams.TYPE_PHONE
+                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
             }
-
             val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -113,14 +114,12 @@ class FloatingStopwatchService : Service() {
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                x = 120
-                y = 220
+                x = 80
+                y = 180
             }
-
             setupButtons()
             setupDrag(view, params)
             updateTime()
-
             windowManager.addView(view, params)
             overlayView = view
             handler.post(ticker)
@@ -130,9 +129,8 @@ class FloatingStopwatchService : Service() {
     }
 
     private fun setupButtons() {
-        binding?.btnStartPause?.setOnClickListener {
-            syncNetworkTime(autoTriggered = false)
-        }
+        binding?.btnStartPause?.setOnClickListener { syncNetworkTime(autoTriggered = false) }
+        binding?.btnCycleMode?.setOnClickListener { cycleMode() }
         binding?.btnReset?.setOnClickListener {
             networkOffsetMs = 0L
             lastSyncLabel = "未同步"
@@ -141,13 +139,20 @@ class FloatingStopwatchService : Service() {
             updateTime()
             Toast.makeText(this, "已清零网络偏移", Toast.LENGTH_SHORT).show()
         }
-        binding?.btnAutoSync?.setOnClickListener {
-            toggleAutoSync()
-        }
-        binding?.btnClose?.setOnClickListener {
-            stopSelf()
-        }
+        binding?.btnAutoSync?.setOnClickListener { toggleAutoSync() }
+        binding?.btnClose?.setOnClickListener { stopSelf() }
         renderAutoSyncButton()
+    }
+
+    private fun cycleMode() {
+        syncMode = when (syncMode) {
+            SyncMode.AUTO -> SyncMode.JD
+            SyncMode.JD -> SyncMode.TAOBAO
+            SyncMode.TAOBAO -> SyncMode.TMALL
+            SyncMode.TMALL -> SyncMode.AUTO
+        }
+        updateTime()
+        Toast.makeText(this, "已切换到${syncMode.label}", Toast.LENGTH_SHORT).show()
     }
 
     private fun toggleAutoSync() {
@@ -163,11 +168,7 @@ class FloatingStopwatchService : Service() {
     }
 
     private fun renderAutoSyncButton() {
-        binding?.btnAutoSync?.text = if (autoSyncEnabled) {
-            "关闭自动校时(5秒)"
-        } else {
-            "开启自动校时(5秒)"
-        }
+        binding?.btnAutoSync?.text = if (autoSyncEnabled) "自动开(5s)" else "自动关(5s)"
     }
 
     private fun setupDrag(view: View, params: WindowManager.LayoutParams) {
@@ -175,7 +176,6 @@ class FloatingStopwatchService : Service() {
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
-
         view.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -207,12 +207,12 @@ class FloatingStopwatchService : Service() {
         binding?.tvAllSources?.text = "全部源：同步中..."
 
         thread(name = "network-time-sync") {
-            val result = runCatching { fetchBestNetworkOffset() }
+            val result = runCatching { fetchAllNetworkOffsets() }
             handler.post {
                 syncInFlight = false
                 binding?.btnStartPause?.isEnabled = true
                 result.onSuccess { allResults ->
-                    val best = allResults.minByOrNull { it.roundTripMs }!!
+                    val best = chooseResult(allResults)
                     networkOffsetMs = best.offsetMs
                     lastSyncLabel = if (best.offsetMs >= 0) "+${best.offsetMs}ms" else "${best.offsetMs}ms"
                     sourceSummary = buildSourceSummary(best)
@@ -235,7 +235,7 @@ class FloatingStopwatchService : Service() {
         }
     }
 
-    private fun fetchBestNetworkOffset(): List<TimeProbeResult> {
+    private fun fetchAllNetworkOffsets(): List<TimeProbeResult> {
         val probes = listOf(
             "京东" to "https://www.jd.com",
             "淘宝" to "https://www.taobao.com",
@@ -244,10 +244,8 @@ class FloatingStopwatchService : Service() {
             "QQ" to "https://www.qq.com",
             "Cloudflare" to "https://www.cloudflare.com"
         )
-
         val success = mutableListOf<TimeProbeResult>()
         val errors = mutableListOf<String>()
-
         for ((name, url) in probes) {
             try {
                 success += probeTime(name, url)
@@ -255,12 +253,22 @@ class FloatingStopwatchService : Service() {
                 errors += "$name:${t.javaClass.simpleName}"
             }
         }
-
-        if (success.isEmpty()) {
-            throw IllegalStateException(errors.joinToString(" | "))
-        }
-
+        if (success.isEmpty()) throw IllegalStateException(errors.joinToString(" | "))
         return success.sortedBy { it.roundTripMs }
+    }
+
+    private fun chooseResult(results: List<TimeProbeResult>): TimeProbeResult {
+        val preferred = when (syncMode) {
+            SyncMode.AUTO -> null
+            SyncMode.JD -> "京东"
+            SyncMode.TAOBAO -> "淘宝"
+            SyncMode.TMALL -> "天猫"
+        }
+        return if (preferred == null) {
+            results.minByOrNull { it.roundTripMs }!!
+        } else {
+            results.firstOrNull { it.name == preferred } ?: results.minByOrNull { it.roundTripMs }!!
+        }
     }
 
     private fun probeTime(name: String, url: String): TimeProbeResult {
@@ -277,18 +285,12 @@ class FloatingStopwatchService : Service() {
         conn.disconnect()
         if (serverTime <= 0L) error("no-date")
         val midpoint = (start + end) / 2
-        return TimeProbeResult(
-            name = name,
-            url = url,
-            offsetMs = serverTime - midpoint,
-            roundTripMs = end - start
-        )
+        return TimeProbeResult(name, url, serverTime - midpoint, end - start)
     }
 
     private fun buildSourceSummary(best: TimeProbeResult): String {
         val offsetText = if (best.offsetMs >= 0) "+${best.offsetMs}ms" else "${best.offsetMs}ms"
-        val netText = formatRtt(best.roundTripMs)
-        return "${best.name} ${offsetText} / RTT ${netText}"
+        return "${best.name} ${offsetText} / RTT ${formatRtt(best.roundTripMs)}"
     }
 
     private fun buildAllSourcesSummary(results: List<TimeProbeResult>): String {
@@ -299,16 +301,15 @@ class FloatingStopwatchService : Service() {
     }
 
     private fun formatRtt(rtt: Long): String {
-        return if (abs(rtt) >= 1000) {
-            String.format(Locale.getDefault(), "%.2fs", rtt / 1000f)
-        } else {
-            "${rtt}ms"
-        }
+        return if (abs(rtt) >= 1000) String.format(Locale.getDefault(), "%.2fs", rtt / 1000f) else "${rtt}ms"
     }
 
     private fun updateTime() {
         val adjusted = System.currentTimeMillis() + networkOffsetMs
+        val countdown = 1000 - (adjusted % 1000)
         binding?.tvTime?.text = timeFormatter.format(Date(adjusted))
+        binding?.tvCountdown?.text = String.format(Locale.getDefault(), "距下一秒：%03dms", if (countdown == 1000L) 0 else countdown)
+        binding?.tvMode?.text = "模式：${syncMode.label}"
         binding?.tvSyncStatus?.text = "网络校时：$lastSyncLabel"
         binding?.tvSources?.text = "参考源：$sourceSummary"
         binding?.tvAllSources?.text = "全部源：$allSourceSummary"
@@ -318,13 +319,7 @@ class FloatingStopwatchService : Service() {
     private fun buildNotification(): Notification {
         createNotificationChannel()
         val intent = Intent(this, MainActivity::class.java)
-        val pendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            intent,
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
-
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(getString(R.string.app_name))
             .setContentText(getString(R.string.notification_text))
@@ -336,11 +331,7 @@ class FloatingStopwatchService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.notification_channel_name),
-            NotificationManager.IMPORTANCE_LOW
-        )
+        val channel = NotificationChannel(CHANNEL_ID, getString(R.string.notification_channel_name), NotificationManager.IMPORTANCE_LOW)
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.createNotificationChannel(channel)
     }
