@@ -2,4 +2,5 @@
     <string name="app_name">Floating Stopwatch</string>
     <string name="notification_channel_name">Floating Stopwatch</string>
     <string name="notification_text">悬浮秒表正在运行</string>
+    <string name="fgs_special_use_subtype">floating_stopwatch_overlay</string>
 </resources>
