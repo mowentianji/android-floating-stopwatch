@@ -25,8 +25,7 @@
         <service
             android:name=".FloatingStopwatchService"
             android:enabled="true"
-            android:exported="false"
-            android:foregroundServiceType="mediaPlayback" />
+            android:exported="false" />
     </application>
 
 </manifest>
