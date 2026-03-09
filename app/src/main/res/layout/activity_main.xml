@@ -42,7 +42,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:gravity="center"
-        android:text="崩溃日志目录：Android/data/com.example.floatingstopwatch/files/crash_logs"
+        android:text="崩溃日志目录：Download/floating_stopwatch_crash_*.txt"
         android:textSize="13sp" />
 
 </LinearLayout>

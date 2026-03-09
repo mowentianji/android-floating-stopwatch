@@ -1,8 +1,12 @@
 package com.example.floatingstopwatch
 
+import android.content.ContentValues
 import android.content.Context
 import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import java.io.File
+import java.io.OutputStream
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.text.SimpleDateFormat
@@ -23,11 +27,8 @@ object CrashLogger {
     }
 
     private fun writeCrash(context: Context, thread: Thread, throwable: Throwable) {
-        val dir = File(context.getExternalFilesDir(null), "crash_logs")
-        if (!dir.exists()) dir.mkdirs()
-
         val ts = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US).format(Date())
-        val file = File(dir, "crash_$ts.txt")
+        val fileName = "floating_stopwatch_crash_$ts.txt"
 
         val sw = StringWriter()
         throwable.printStackTrace(PrintWriter(sw))
@@ -45,6 +46,30 @@ object CrashLogger {
             appendLine(sw.toString())
         }
 
-        file.writeText(content)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            writeToDownloadsMediaStore(context, fileName, content)
+        } else {
+            writeToLegacyDownloads(fileName, content)
+        }
+    }
+
+    private fun writeToDownloadsMediaStore(context: Context, fileName: String, content: String) {
+        val resolver = context.contentResolver
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(MediaStore.Downloads.MIME_TYPE, "text/plain")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+        val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return
+        resolver.openOutputStream(uri)?.use { output ->
+            output.write(content.toByteArray())
+            output.flush()
+        }
+    }
+
+    private fun writeToLegacyDownloads(fileName: String, content: String) {
+        val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (!dir.exists()) dir.mkdirs()
+        File(dir, fileName).writeText(content)
     }
 }
