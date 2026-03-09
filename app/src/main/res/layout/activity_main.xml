@@ -36,4 +36,13 @@
         android:layout_marginTop="12dp"
         android:text="启动悬浮秒表" />
 
+    <TextView
+        android:id="@+id/tvCrashPath"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:gravity="center"
+        android:text="崩溃日志目录：Android/data/com.example.floatingstopwatch/files/crash_logs"
+        android:textSize="13sp" />
+
 </LinearLayout>
