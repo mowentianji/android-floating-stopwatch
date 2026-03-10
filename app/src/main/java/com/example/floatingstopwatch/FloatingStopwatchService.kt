@@ -8,10 +8,14 @@ import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.graphics.PixelFormat
+import android.graphics.Typeface
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.MotionEvent
@@ -21,22 +25,13 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.example.floatingstopwatch.databinding.OverlayStopwatchBinding
-import java.net.HttpURLConnection
-import java.net.URL
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import kotlin.concurrent.thread
-import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 class FloatingStopwatchService : Service() {
-
-    private enum class SyncMode(val label: String) {
-        AUTO("自动最快源"),
-        JD("京东优先"),
-        TAOBAO("淘宝优先"),
-        TMALL("天猫优先")
-    }
 
     private enum class OverlayPage(val title: String) {
         STOPWATCH("悬浮秒表"),
@@ -47,46 +42,30 @@ class FloatingStopwatchService : Service() {
     private lateinit var windowManager: WindowManager
     private var overlayView: View? = null
     private var binding: OverlayStopwatchBinding? = null
+    private var config = OverlayConfig()
+    private var currentPage = OverlayPage.STOPWATCH
+    private var isMinimized = false
+    private var countdownEndAtMs: Long? = null
+    private var lastCountdownAlertMinute = -1L
+    private var lastHourlyAlertHour = -1
 
     private val handler by lazy { Handler(Looper.getMainLooper()) }
-    private val timeFormatter = SimpleDateFormat("HH:mm:ss.SSS", Locale.getDefault())
-    private var networkOffsetMs = 0L
-    private var lastSyncLabel = "未同步"
-    private var sourceSummary = "未同步"
-    private var allSourceSummary = "未同步"
-    private var autoSyncEnabled = false
-    private val autoSyncIntervalMs = 5000L
-    private var syncInFlight = false
-    private var syncMode = SyncMode.AUTO
-    private var currentPage = OverlayPage.STOPWATCH
 
     private val ticker = object : Runnable {
         override fun run() {
             updateTime()
-            handler.postDelayed(this, 16)
+            handler.postDelayed(this, 50)
         }
     }
-
-    private val autoSyncRunnable = object : Runnable {
-        override fun run() {
-            if (autoSyncEnabled) {
-                syncNetworkTime(autoTriggered = true)
-                handler.postDelayed(this, autoSyncIntervalMs)
-            }
-        }
-    }
-
-    data class TimeProbeResult(
-        val name: String,
-        val url: String,
-        val offsetMs: Long,
-        val roundTripMs: Long
-    )
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        config = OverlayConfigStore.load(this)
+        if (config.countdownEnabled) {
+            countdownEndAtMs = System.currentTimeMillis() + config.countdownMinutes * 60_000L
+        }
         try {
             startForeground(NOTIFICATION_ID, buildNotification())
             showOverlaySafely()
@@ -129,6 +108,7 @@ class FloatingStopwatchService : Service() {
             setupButtons()
             setupDrag(view, params)
             showPage(currentPage)
+            applyConfigToViews()
             updateTime()
             windowManager.addView(view, params)
             overlayView = view
@@ -139,73 +119,79 @@ class FloatingStopwatchService : Service() {
     }
 
     private fun setupButtons() {
-        binding?.btnStartPause?.setOnClickListener { syncNetworkTime(autoTriggered = false) }
-        binding?.btnCycleMode?.setOnClickListener { cycleMode() }
-        binding?.btnReset?.setOnClickListener {
-            networkOffsetMs = 0L
-            lastSyncLabel = "未同步"
-            sourceSummary = "未同步"
-            allSourceSummary = "未同步"
-            updateTime()
-            Toast.makeText(this, "已清零网络偏移", Toast.LENGTH_SHORT).show()
-        }
-        binding?.btnAutoSync?.setOnClickListener { toggleAutoSync() }
         binding?.btnClose?.setOnClickListener { stopSelf() }
+        binding?.btnMinimize?.setOnClickListener { setMinimized(true) }
+        binding?.btnRestore?.setOnClickListener { setMinimized(false) }
         binding?.btnTabStopwatch?.setOnClickListener { showPage(OverlayPage.STOPWATCH) }
         binding?.btnTabAutoClicker?.setOnClickListener { showPage(OverlayPage.AUTO_CLICKER) }
         binding?.btnTabProfile?.setOnClickListener { showPage(OverlayPage.PROFILE) }
-        renderAutoSyncButton()
-        renderTabButtons()
-    }
-
-    private fun showPage(page: OverlayPage) {
-        currentPage = page
-        binding?.pageStopwatch?.visibility = if (page == OverlayPage.STOPWATCH) View.VISIBLE else View.GONE
-        binding?.pageAutoClicker?.visibility = if (page == OverlayPage.AUTO_CLICKER) View.VISIBLE else View.GONE
-        binding?.pageProfile?.visibility = if (page == OverlayPage.PROFILE) View.VISIBLE else View.GONE
-        binding?.tvPageTitle?.text = page.title
-        renderTabButtons()
-    }
-
-    private fun renderTabButtons() {
-        val activeBg = R.drawable.overlay_button_primary
-        val inactiveBg = R.drawable.overlay_button_secondary
-        renderTabButton(binding?.btnTabStopwatch, currentPage == OverlayPage.STOPWATCH, activeBg, inactiveBg)
-        renderTabButton(binding?.btnTabAutoClicker, currentPage == OverlayPage.AUTO_CLICKER, activeBg, inactiveBg)
-        renderTabButton(binding?.btnTabProfile, currentPage == OverlayPage.PROFILE, activeBg, inactiveBg)
-    }
-
-    private fun renderTabButton(button: Button?, active: Boolean, activeBg: Int, inactiveBg: Int) {
-        button ?: return
-        button.setBackgroundResource(if (active) activeBg else inactiveBg)
-        button.setTextColor(if (active) 0xFFFFFFFF.toInt() else 0xFFE5EDFF.toInt())
-    }
-
-    private fun cycleMode() {
-        syncMode = when (syncMode) {
-            SyncMode.AUTO -> SyncMode.JD
-            SyncMode.JD -> SyncMode.TAOBAO
-            SyncMode.TAOBAO -> SyncMode.TMALL
-            SyncMode.TMALL -> SyncMode.AUTO
+        binding?.btnSyncTime?.setOnClickListener {
+            config = config.copy(lastSyncLabel = "本机时间")
+            saveConfig()
+            updateTime()
+            Toast.makeText(this, "已同步本机时间", Toast.LENGTH_SHORT).show()
         }
-        updateTime()
-        Toast.makeText(this, "已切换到${syncMode.label}", Toast.LENGTH_SHORT).show()
-    }
-
-    private fun toggleAutoSync() {
-        autoSyncEnabled = !autoSyncEnabled
-        handler.removeCallbacks(autoSyncRunnable)
-        if (autoSyncEnabled) {
-            handler.post(autoSyncRunnable)
-            Toast.makeText(this, "已开启自动校时", Toast.LENGTH_SHORT).show()
-        } else {
-            Toast.makeText(this, "已关闭自动校时", Toast.LENGTH_SHORT).show()
+        binding?.btnOffsetMinus?.setOnClickListener {
+            config = config.copy(timeOffsetSeconds = max(-60, config.timeOffsetSeconds - 1))
+            saveAndRender()
         }
-        renderAutoSyncButton()
-    }
-
-    private fun renderAutoSyncButton() {
-        binding?.btnAutoSync?.text = if (autoSyncEnabled) "自动开(5s)" else "自动关(5s)"
+        binding?.btnOffsetPlus?.setOnClickListener {
+            config = config.copy(timeOffsetSeconds = min(60, config.timeOffsetSeconds + 1))
+            saveAndRender()
+        }
+        binding?.switchSound?.setOnCheckedChangeListener { _, checked ->
+            config = config.copy(soundEnabled = checked)
+            saveAndRender()
+        }
+        binding?.switchCountdown?.setOnCheckedChangeListener { _, checked ->
+            config = config.copy(countdownEnabled = checked)
+            countdownEndAtMs = if (checked) System.currentTimeMillis() + config.countdownMinutes * 60_000L else null
+            lastCountdownAlertMinute = -1L
+            saveAndRender()
+        }
+        binding?.btnCountdownMinus?.setOnClickListener {
+            config = config.copy(countdownMinutes = max(1, config.countdownMinutes - 1))
+            if (config.countdownEnabled) countdownEndAtMs = System.currentTimeMillis() + config.countdownMinutes * 60_000L
+            saveAndRender()
+        }
+        binding?.btnCountdownPlus?.setOnClickListener {
+            config = config.copy(countdownMinutes = min(180, config.countdownMinutes + 1))
+            if (config.countdownEnabled) countdownEndAtMs = System.currentTimeMillis() + config.countdownMinutes * 60_000L
+            saveAndRender()
+        }
+        binding?.switchLed?.setOnCheckedChangeListener { _, checked ->
+            config = config.copy(ledFontEnabled = checked)
+            saveAndRender()
+        }
+        binding?.switchControls?.setOnCheckedChangeListener { _, checked ->
+            config = config.copy(showControlButtons = checked)
+            saveAndRender()
+        }
+        binding?.btnFormat?.setOnClickListener {
+            config = config.copy(formatIndex = (config.formatIndex + 1) % OverlayConfigStore.formatOptions.size)
+            saveAndRender()
+        }
+        binding?.btnBackgroundColor?.setOnClickListener {
+            config = config.copy(backgroundIndex = (config.backgroundIndex + 1) % OverlayConfigStore.backgroundOptions.size)
+            saveAndRender()
+        }
+        binding?.btnTextColor?.setOnClickListener {
+            config = config.copy(textColorIndex = (config.textColorIndex + 1) % OverlayConfigStore.textColorOptions.size)
+            saveAndRender()
+        }
+        binding?.btnFontMinus?.setOnClickListener {
+            config = config.copy(fontSizeSp = max(18, config.fontSizeSp - 2))
+            saveAndRender()
+        }
+        binding?.btnFontPlus?.setOnClickListener {
+            config = config.copy(fontSizeSp = min(48, config.fontSizeSp + 2))
+            saveAndRender()
+        }
+        binding?.btnLaunchOverlay?.setOnClickListener {
+            if (config.countdownEnabled) countdownEndAtMs = System.currentTimeMillis() + config.countdownMinutes * 60_000L
+            saveAndRender()
+            Toast.makeText(this, "悬浮秒表已按当前配置开启", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun setupDrag(view: View, params: WindowManager.LayoutParams) {
@@ -235,122 +221,142 @@ class FloatingStopwatchService : Service() {
         }
     }
 
-    private fun syncNetworkTime(autoTriggered: Boolean) {
-        if (syncInFlight) return
-        syncInFlight = true
-        binding?.btnStartPause?.isEnabled = false
-        binding?.tvSyncStatus?.text = if (autoTriggered) "网络校时：自动同步中..." else "网络校时：同步中..."
-        binding?.tvSources?.text = "参考源：同步中..."
-        binding?.tvAllSources?.text = "全部源：同步中..."
-
-        thread(name = "network-time-sync") {
-            val result = runCatching { fetchAllNetworkOffsets() }
-            handler.post {
-                syncInFlight = false
-                binding?.btnStartPause?.isEnabled = true
-                result.onSuccess { allResults ->
-                    val best = chooseResult(allResults)
-                    networkOffsetMs = best.offsetMs
-                    lastSyncLabel = if (best.offsetMs >= 0) "+${best.offsetMs}ms" else "${best.offsetMs}ms"
-                    sourceSummary = buildSourceSummary(best)
-                    allSourceSummary = buildAllSourcesSummary(allResults)
-                    updateTime()
-                    if (!autoTriggered) {
-                        Toast.makeText(this, "校时完成：${best.name} ${lastSyncLabel}", Toast.LENGTH_SHORT).show()
-                    }
-                }.onFailure {
-                    val msg = "校时失败: ${it.javaClass.simpleName}"
-                    lastSyncLabel = msg
-                    sourceSummary = msg
-                    allSourceSummary = msg
-                    updateTime()
-                    if (!autoTriggered) {
-                        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        }
+    private fun showPage(page: OverlayPage) {
+        currentPage = page
+        binding?.pageStopwatch?.visibility = if (page == OverlayPage.STOPWATCH) View.VISIBLE else View.GONE
+        binding?.pageAutoClicker?.visibility = if (page == OverlayPage.AUTO_CLICKER) View.VISIBLE else View.GONE
+        binding?.pageProfile?.visibility = if (page == OverlayPage.PROFILE) View.VISIBLE else View.GONE
+        binding?.tvPageTitle?.text = page.title
+        renderTabButtons()
     }
 
-    private fun fetchAllNetworkOffsets(): List<TimeProbeResult> {
-        val probes = listOf(
-            "京东" to "https://www.jd.com",
-            "淘宝" to "https://www.taobao.com",
-            "天猫" to "https://www.tmall.com",
-            "百度" to "https://www.baidu.com",
-            "QQ" to "https://www.qq.com",
-            "Cloudflare" to "https://www.cloudflare.com"
-        )
-        val success = mutableListOf<TimeProbeResult>()
-        val errors = mutableListOf<String>()
-        for ((name, url) in probes) {
-            try {
-                success += probeTime(name, url)
-            } catch (t: Throwable) {
-                errors += "$name:${t.javaClass.simpleName}"
-            }
-        }
-        if (success.isEmpty()) throw IllegalStateException(errors.joinToString(" | "))
-        return success.sortedBy { it.roundTripMs }
+    private fun renderTabButtons() {
+        renderTabButton(binding?.btnTabStopwatch, currentPage == OverlayPage.STOPWATCH)
+        renderTabButton(binding?.btnTabAutoClicker, currentPage == OverlayPage.AUTO_CLICKER)
+        renderTabButton(binding?.btnTabProfile, currentPage == OverlayPage.PROFILE)
     }
 
-    private fun chooseResult(results: List<TimeProbeResult>): TimeProbeResult {
-        val preferred = when (syncMode) {
-            SyncMode.AUTO -> null
-            SyncMode.JD -> "京东"
-            SyncMode.TAOBAO -> "淘宝"
-            SyncMode.TMALL -> "天猫"
-        }
-        return if (preferred == null) {
-            results.minByOrNull { it.roundTripMs }!!
-        } else {
-            results.firstOrNull { it.name == preferred } ?: results.minByOrNull { it.roundTripMs }!!
-        }
+    private fun renderTabButton(button: Button?, active: Boolean) {
+        button ?: return
+        button.setBackgroundResource(if (active) R.drawable.overlay_button_primary else R.drawable.overlay_button_secondary)
+        button.setTextColor(if (active) 0xFFFFFFFF.toInt() else 0xFFE5EDFF.toInt())
     }
 
-    private fun probeTime(name: String, url: String): TimeProbeResult {
-        val start = System.currentTimeMillis()
-        val conn = (URL(url).openConnection() as HttpURLConnection).apply {
-            requestMethod = "HEAD"
-            connectTimeout = 5000
-            readTimeout = 5000
-            instanceFollowRedirects = true
-            connect()
-        }
-        val serverTime = conn.date
-        val end = System.currentTimeMillis()
-        conn.disconnect()
-        if (serverTime <= 0L) error("no-date")
-        val midpoint = (start + end) / 2
-        return TimeProbeResult(name, url, serverTime - midpoint, end - start)
+    private fun setMinimized(minimized: Boolean) {
+        isMinimized = minimized
+        binding?.fullContent?.visibility = if (minimized) View.GONE else View.VISIBLE
+        binding?.minimizedContent?.visibility = if (minimized) View.VISIBLE else View.GONE
     }
 
-    private fun buildSourceSummary(best: TimeProbeResult): String {
-        val offsetText = if (best.offsetMs >= 0) "+${best.offsetMs}ms" else "${best.offsetMs}ms"
-        return "${best.name} ${offsetText} / RTT ${formatRtt(best.roundTripMs)}"
+    private fun saveAndRender() {
+        saveConfig()
+        applyConfigToViews()
+        updateTime()
     }
 
-    private fun buildAllSourcesSummary(results: List<TimeProbeResult>): String {
-        return results.joinToString(" | ") {
-            val offsetText = if (it.offsetMs >= 0) "+${it.offsetMs}ms" else "${it.offsetMs}ms"
-            "${it.name} ${offsetText} ${formatRtt(it.roundTripMs)}"
-        }
+    private fun saveConfig() {
+        OverlayConfigStore.save(this, config)
     }
 
-    private fun formatRtt(rtt: Long): String {
-        return if (abs(rtt) >= 1000) String.format(Locale.getDefault(), "%.2fs", rtt / 1000f) else "${rtt}ms"
+    private fun applyConfigToViews() {
+        val selectedBg = OverlayConfigStore.backgroundOptions[config.backgroundIndex]
+        val selectedTextColor = OverlayConfigStore.textColorOptions[config.textColorIndex]
+        val typeface = if (config.ledFontEnabled) Typeface.MONOSPACE else Typeface.DEFAULT_BOLD
+
+        binding?.panelRoot?.setBackgroundColor(selectedBg.second)
+        binding?.tvTime?.setTextColor(selectedTextColor.second)
+        binding?.tvMinimizedTime?.setTextColor(selectedTextColor.second)
+        binding?.tvTime?.typeface = typeface
+        binding?.tvMinimizedTime?.typeface = typeface
+        binding?.tvTime?.setTextSize(TypedValue.COMPLEX_UNIT_SP, config.fontSizeSp.toFloat())
+        binding?.tvMinimizedTime?.setTextSize(TypedValue.COMPLEX_UNIT_SP, max(16, config.fontSizeSp - 6).toFloat())
+
+        binding?.tvSyncStatus?.text = "同步时间：${config.lastSyncLabel}"
+        binding?.tvOffsetValue?.text = "${config.timeOffsetSeconds} 秒"
+        binding?.tvCountdownMinutes?.text = "${config.countdownMinutes} 分钟"
+        binding?.tvFontSizeValue?.text = config.fontSizeSp.toString()
+        binding?.switchSound?.isChecked = config.soundEnabled
+        binding?.switchCountdown?.isChecked = config.countdownEnabled
+        binding?.switchLed?.isChecked = config.ledFontEnabled
+        binding?.switchControls?.isChecked = config.showControlButtons
+        binding?.btnFormat?.text = "时间格式：${OverlayConfigStore.formatOptions[config.formatIndex]}"
+        binding?.btnBackgroundColor?.text = "背景色：${selectedBg.first}"
+        binding?.btnTextColor?.text = "字体颜色：${selectedTextColor.first}"
+        binding?.btnClose?.visibility = if (config.showControlButtons) View.VISIBLE else View.GONE
+        binding?.btnMinimize?.visibility = if (config.showControlButtons) View.VISIBLE else View.GONE
+        binding?.tvMode?.text = "控制按钮：${if (config.showControlButtons) "开启" else "关闭"}"
     }
 
     private fun updateTime() {
-        val adjusted = System.currentTimeMillis() + networkOffsetMs
-        val countdown = 1000 - (adjusted % 1000)
-        binding?.tvTime?.text = timeFormatter.format(Date(adjusted))
-        binding?.tvCountdown?.text = String.format(Locale.getDefault(), "距下一秒：%03dms", if (countdown == 1000L) 0 else countdown)
-        binding?.tvMode?.text = "模式：${syncMode.label}"
-        binding?.tvSyncStatus?.text = "网络校时：$lastSyncLabel"
-        binding?.tvSources?.text = "参考源：$sourceSummary"
-        binding?.tvAllSources?.text = "全部源：$allSourceSummary"
-        renderAutoSyncButton()
+        val now = System.currentTimeMillis() + config.timeOffsetSeconds * 1000L
+        val formatted = if (config.countdownEnabled) {
+            val remain = max(0L, (countdownEndAtMs ?: now) - now)
+            formatCountdown(remain, OverlayConfigStore.formatOptions[config.formatIndex])
+        } else {
+            SimpleDateFormat(OverlayConfigStore.formatOptions[config.formatIndex], Locale.getDefault()).format(Date(now))
+        }
+        binding?.tvTime?.text = formatted
+        binding?.tvMinimizedTime?.text = formatted
+        binding?.tvCountdown?.text = if (config.countdownEnabled) {
+            val remain = max(0L, (countdownEndAtMs ?: now) - now)
+            "倒计时剩余：${formatRemainLabel(remain)}"
+        } else {
+            "当前模式：普通时间"
+        }
+        binding?.tvSources?.text = "时间偏移：${config.timeOffsetSeconds} 秒；声音提醒：${if (config.soundEnabled) "开启" else "关闭"}"
+        binding?.tvAllSources?.text = "LED字体：${if (config.ledFontEnabled) "开启" else "关闭"}；格式：${OverlayConfigStore.formatOptions[config.formatIndex]}"
+        maybePlayReminder(now)
+    }
+
+    private fun maybePlayReminder(now: Long) {
+        if (!config.soundEnabled) return
+        val calendar = java.util.Calendar.getInstance().apply { timeInMillis = now }
+        if (!config.countdownEnabled) {
+            val minute = calendar.get(java.util.Calendar.MINUTE)
+            val second = calendar.get(java.util.Calendar.SECOND)
+            val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+            if (minute == 0 && second == 0 && lastHourlyAlertHour != hour) {
+                playTone()
+                lastHourlyAlertHour = hour
+            }
+            return
+        }
+        val remain = max(0L, (countdownEndAtMs ?: now) - now)
+        val minuteMark = remain / 60_000L
+        if (remain == 0L && lastCountdownAlertMinute != 0L) {
+            playTone()
+            lastCountdownAlertMinute = 0L
+        } else if (remain in 1..59_999L && lastCountdownAlertMinute != minuteMark) {
+            playTone()
+            lastCountdownAlertMinute = minuteMark
+        }
+    }
+
+    private fun playTone() {
+        runCatching {
+            ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 180)
+        }
+    }
+
+    private fun formatCountdown(remainMs: Long, pattern: String): String {
+        val totalSeconds = remainMs / 1000L
+        val hours = totalSeconds / 3600
+        val minutes = (totalSeconds % 3600) / 60
+        val seconds = totalSeconds % 60
+        val tenth = (remainMs % 1000L) / 100L
+        val millis = remainMs % 1000L
+        return when (pattern) {
+            "HH:mm:ss.SSS" -> String.format(Locale.getDefault(), "%02d:%02d:%02d.%03d", hours, minutes, seconds, millis)
+            "mm:ss.SS" -> String.format(Locale.getDefault(), "%02d:%02d.%02d", hours * 60 + minutes, seconds, millis / 10)
+            else -> String.format(Locale.getDefault(), "%02d:%02d:%02d.%01d", hours, minutes, seconds, tenth)
+        }
+    }
+
+    private fun formatRemainLabel(remainMs: Long): String {
+        val totalSeconds = remainMs / 1000L
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
     }
 
     private fun buildNotification(): Notification {
