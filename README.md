@@ -30,6 +30,11 @@
 4. 运行 `Build Android APK`，或者直接 push 触发
 5. 构建完成后，在 `Artifacts` 下载 `floating-stopwatch-debug-apk`
 
+## 版本规则
+- 当前版本：`0.0.1`
+- 每次后续修改都递增版本号，例如：`0.0.2`、`0.0.3`
+- 同时递增 `versionCode`
+
 ## 说明
 - 悬浮窗依赖 `SYSTEM_ALERT_WINDOW`
 - 秒表通过前台服务持续运行，降低被系统回收的概率
