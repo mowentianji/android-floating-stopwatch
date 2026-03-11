@@ -659,6 +659,94 @@
                         android:text="+" />
                 </LinearLayout>
 
+                <Button
+                    android:id="@+id/btnAutoPickPoint"
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp"
+                    android:layout_marginTop="12dp"
+                    android:text="取点"
+                    android:textAllCaps="false" />
+
+                <TextView
+                    android:id="@+id/tvAutoPoint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:text="点击位置：未设置"
+                    android:textColor="#6B7280"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="直线滑动"
+                    android:textColor="#111827"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="滑动起点"
+                        android:textColor="#111827"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoPickSwipeStart"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="取" />
+
+                    <TextView
+                        android:id="@+id/tvAutoSwipeStart"
+                        android:layout_width="130dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="未设置"
+                        android:textColor="#2563EB"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="滑动终点"
+                        android:textColor="#111827"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoPickSwipeEnd"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="取" />
+
+                    <TextView
+                        android:id="@+id/tvAutoSwipeEnd"
+                        android:layout_width="130dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="未设置"
+                        android:textColor="#2563EB"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

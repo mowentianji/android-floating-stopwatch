@@ -1,6 +1,7 @@
 package com.itbird.floatingstopwatch
 
 import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -33,13 +34,40 @@ class MainActivity : AppCompatActivity() {
     private var config = OverlayConfig()
     private var currentPage = MainPage.STOPWATCH
     private val handler = Handler(Looper.getMainLooper())
+    private val autoHandler = Handler(Looper.getMainLooper())
     private var autoConfig = AutoClickerConfigStore.load(this)
+    private var autoPoints = AutoClickerPointStore.load(this)
     private var autoRunning = false
+    private var captureTarget: CaptureTarget? = null
 
     private val previewTicker = object : Runnable {
         override fun run() {
             renderPreviewTime()
             handler.postDelayed(this, 100)
+        }
+    }
+
+    private enum class CaptureTarget {
+        TAP,
+        SWIPE_START,
+        SWIPE_END
+    }
+
+    private val pointReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            if (intent?.action != TapCaptureOverlayService.ACTION_POINT_CAPTURED) return
+            val x = intent.getIntExtra(TapCaptureOverlayService.EXTRA_X, -1)
+            val y = intent.getIntExtra(TapCaptureOverlayService.EXTRA_Y, -1)
+            if (x < 0 || y < 0) return
+            when (captureTarget) {
+                CaptureTarget.TAP -> autoPoints = autoPoints.copy(tapX = x, tapY = y)
+                CaptureTarget.SWIPE_START -> autoPoints = autoPoints.copy(swipeStartX = x, swipeStartY = y)
+                CaptureTarget.SWIPE_END -> autoPoints = autoPoints.copy(swipeEndX = x, swipeEndY = y)
+                else -> {}
+            }
+            AutoClickerPointStore.save(this@MainActivity, autoPoints)
+            captureTarget = null
+            renderAutoConfig()
         }
     }
 
@@ -49,6 +77,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         config = OverlayConfigStore.load(this)
         autoConfig = AutoClickerConfigStore.load(this)
+        autoPoints = AutoClickerPointStore.load(this)
         setupUi()
         renderConfig()
         renderAutoConfig()
@@ -59,16 +88,19 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         config = OverlayConfigStore.load(this)
         autoConfig = AutoClickerConfigStore.load(this)
+        autoPoints = AutoClickerPointStore.load(this)
         renderConfig()
         renderAutoConfig()
         renderLastError()
         handler.removeCallbacks(previewTicker)
         handler.post(previewTicker)
         binding.btnStartOverlay.text = if (FloatingStopwatchService.isRunning) "关闭悬浮窗" else "开启悬浮窗"
+        registerReceiver(pointReceiver, IntentFilter(TapCaptureOverlayService.ACTION_POINT_CAPTURED))
     }
 
     override fun onPause() {
         handler.removeCallbacks(previewTicker)
+        unregisterReceiver(pointReceiver)
         super.onPause()
     }
 
@@ -138,6 +170,9 @@ class MainActivity : AppCompatActivity() {
         binding.btnAutoLoopPlus.setOnClickListener { updateAutoConfig(autoConfig.copy(loopIntervalMs = min(60000, autoConfig.loopIntervalMs + 50))) }
         binding.btnAutoReset.setOnClickListener { updateAutoConfig(AutoClickerConfigStore.reset()) }
         binding.btnAutoStart.setOnClickListener { toggleAutoClicker() }
+        binding.btnAutoPickPoint.setOnClickListener { startPointCapture(CaptureTarget.TAP) }
+        binding.btnAutoPickSwipeStart.setOnClickListener { startPointCapture(CaptureTarget.SWIPE_START) }
+        binding.btnAutoPickSwipeEnd.setOnClickListener { startPointCapture(CaptureTarget.SWIPE_END) }
         showPage(MainPage.STOPWATCH)
     }
 
@@ -198,6 +233,21 @@ class MainActivity : AppCompatActivity() {
         binding.tvAutoLoopValue.text = "${autoConfig.loopIntervalMs} ms"
         binding.tvAutoStatus.text = if (autoRunning) "状态：运行中" else "状态：未启动"
         binding.btnAutoStart.text = if (autoRunning) "停止自动点击器" else "启动自动点击器"
+        binding.tvAutoPoint.text = if (autoPoints.tapX >= 0 && autoPoints.tapY >= 0) {
+            "点击位置：${autoPoints.tapX}, ${autoPoints.tapY}"
+        } else {
+            "点击位置：未设置"
+        }
+        binding.tvAutoSwipeStart.text = if (autoPoints.swipeStartX >= 0 && autoPoints.swipeStartY >= 0) {
+            "${autoPoints.swipeStartX}, ${autoPoints.swipeStartY}"
+        } else {
+            "未设置"
+        }
+        binding.tvAutoSwipeEnd.text = if (autoPoints.swipeEndX >= 0 && autoPoints.swipeEndY >= 0) {
+            "${autoPoints.swipeEndX}, ${autoPoints.swipeEndY}"
+        } else {
+            "未设置"
+        }
     }
 
     private fun renderPreviewStyle() {
@@ -253,13 +303,77 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toggleAutoClicker() {
+        if (!isAccessibilityEnabled()) {
+            Toast.makeText(this, "请先开启无障碍服务：自动点击器", Toast.LENGTH_LONG).show()
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            return
+        }
+        val service = AutoClickerService.instance
+        if (service == null) {
+            Toast.makeText(this, "无障碍服务未连接", Toast.LENGTH_SHORT).show()
+            return
+        }
         autoRunning = !autoRunning
         renderAutoConfig()
         if (autoRunning) {
-            Toast.makeText(this, if (autoConfig.delayStartSec > 0) "已设置倒计时启动" else "自动点击器已启动（模拟）", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, if (autoConfig.delayStartSec > 0) "已设置倒计时启动" else "自动点击器已启动", Toast.LENGTH_SHORT).show()
+            startAutoLoop(service)
         } else {
-            Toast.makeText(this, "自动点击器已停止（模拟）", Toast.LENGTH_SHORT).show()
+            autoHandler.removeCallbacksAndMessages(null)
+            Toast.makeText(this, "自动点击器已停止", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    private fun startAutoLoop(service: AutoClickerService) {
+        val startDelay = autoConfig.delayStartSec * 1000L
+        autoHandler.postDelayed({
+            if (!autoRunning) return@postDelayed
+            val repeat = autoConfig.repeatCount
+            val interval = autoConfig.intervalMs.toLong()
+            val loopInterval = autoConfig.loopIntervalMs.toLong()
+            val tapX = if (autoPoints.tapX >= 0) autoPoints.tapX else resources.displayMetrics.widthPixels / 2
+            val tapY = if (autoPoints.tapY >= 0) autoPoints.tapY else resources.displayMetrics.heightPixels / 2
+            val swipeReady = autoPoints.swipeStartX >= 0 && autoPoints.swipeStartY >= 0 && autoPoints.swipeEndX >= 0 && autoPoints.swipeEndY >= 0
+            var count = 0
+            val runner = object : Runnable {
+                override fun run() {
+                    if (!autoRunning) return
+                    if (swipeReady) {
+                        service.performSwipe(autoPoints.swipeStartX, autoPoints.swipeStartY, autoPoints.swipeEndX, autoPoints.swipeEndY, autoConfig.swipeMs)
+                    } else {
+                        service.performTap(tapX, tapY, autoConfig.holdMs)
+                    }
+                    count++
+                    if (count < repeat) {
+                        autoHandler.postDelayed(this, interval)
+                    } else {
+                        if (loopInterval > 0) {
+                            autoHandler.postDelayed(this, loopInterval)
+                        } else {
+                            count = 0
+                            autoHandler.postDelayed(this, interval)
+                        }
+                    }
+                }
+            }
+            autoHandler.post(runner)
+        }, startDelay)
+    }
+
+    private fun isAccessibilityEnabled(): Boolean {
+        val enabledServices = Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
+        return enabledServices.contains("${packageName}/${AutoClickerService::class.java.name}")
+    }
+
+    private fun startPointCapture(target: CaptureTarget) {
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "请先允许悬浮窗权限，已自动跳转", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
+            return
+        }
+        captureTarget = target
+        startService(Intent(this, TapCaptureOverlayService::class.java))
+        Toast.makeText(this, "请点击屏幕取点", Toast.LENGTH_SHORT).show()
     }
 
     private fun launchOverlay() {
