@@ -33,6 +33,8 @@ class MainActivity : AppCompatActivity() {
     private var config = OverlayConfig()
     private var currentPage = MainPage.STOPWATCH
     private val handler = Handler(Looper.getMainLooper())
+    private var autoConfig = AutoClickerConfigStore.load(this)
+    private var autoRunning = false
 
     private val previewTicker = object : Runnable {
         override fun run() {
@@ -46,15 +48,19 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         config = OverlayConfigStore.load(this)
+        autoConfig = AutoClickerConfigStore.load(this)
         setupUi()
         renderConfig()
+        renderAutoConfig()
         renderLastError()
     }
 
     override fun onResume() {
         super.onResume()
         config = OverlayConfigStore.load(this)
+        autoConfig = AutoClickerConfigStore.load(this)
         renderConfig()
+        renderAutoConfig()
         renderLastError()
         handler.removeCallbacks(previewTicker)
         handler.post(previewTicker)
@@ -116,6 +122,22 @@ class MainActivity : AppCompatActivity() {
             saveAndRender()
         }
         binding.btnStartOverlay.setOnClickListener { toggleOverlay() }
+        binding.btnAutoIntervalMinus.setOnClickListener { updateAutoConfig(autoConfig.copy(intervalMs = max(10, autoConfig.intervalMs - 10))) }
+        binding.btnAutoIntervalPlus.setOnClickListener { updateAutoConfig(autoConfig.copy(intervalMs = min(5000, autoConfig.intervalMs + 10))) }
+        binding.btnAutoHoldMinus.setOnClickListener { updateAutoConfig(autoConfig.copy(holdMs = max(10, autoConfig.holdMs - 10))) }
+        binding.btnAutoHoldPlus.setOnClickListener { updateAutoConfig(autoConfig.copy(holdMs = min(5000, autoConfig.holdMs + 10))) }
+        binding.btnAutoSwipeMinus.setOnClickListener { updateAutoConfig(autoConfig.copy(swipeMs = max(50, autoConfig.swipeMs - 50))) }
+        binding.btnAutoSwipePlus.setOnClickListener { updateAutoConfig(autoConfig.copy(swipeMs = min(10000, autoConfig.swipeMs + 50))) }
+        binding.btnAutoPinchMinus.setOnClickListener { updateAutoConfig(autoConfig.copy(pinchMs = max(100, autoConfig.pinchMs - 100))) }
+        binding.btnAutoPinchPlus.setOnClickListener { updateAutoConfig(autoConfig.copy(pinchMs = min(20000, autoConfig.pinchMs + 100))) }
+        binding.btnAutoRepeatMinus.setOnClickListener { updateAutoConfig(autoConfig.copy(repeatCount = max(1, autoConfig.repeatCount - 1))) }
+        binding.btnAutoRepeatPlus.setOnClickListener { updateAutoConfig(autoConfig.copy(repeatCount = min(999, autoConfig.repeatCount + 1))) }
+        binding.btnAutoDelayMinus.setOnClickListener { updateAutoConfig(autoConfig.copy(delayStartSec = max(0, autoConfig.delayStartSec - 1))) }
+        binding.btnAutoDelayPlus.setOnClickListener { updateAutoConfig(autoConfig.copy(delayStartSec = min(3600, autoConfig.delayStartSec + 1))) }
+        binding.btnAutoLoopMinus.setOnClickListener { updateAutoConfig(autoConfig.copy(loopIntervalMs = max(0, autoConfig.loopIntervalMs - 50))) }
+        binding.btnAutoLoopPlus.setOnClickListener { updateAutoConfig(autoConfig.copy(loopIntervalMs = min(60000, autoConfig.loopIntervalMs + 50))) }
+        binding.btnAutoReset.setOnClickListener { updateAutoConfig(AutoClickerConfigStore.reset()) }
+        binding.btnAutoStart.setOnClickListener { toggleAutoClicker() }
         showPage(MainPage.STOPWATCH)
     }
 
@@ -143,6 +165,12 @@ class MainActivity : AppCompatActivity() {
         renderConfig()
     }
 
+    private fun updateAutoConfig(newConfig: AutoClickerConfig) {
+        autoConfig = newConfig
+        AutoClickerConfigStore.save(this, autoConfig)
+        renderAutoConfig()
+    }
+
     private fun renderConfig() {
         binding.tvSyncStatus.text = "同步时间：${config.lastSyncLabel}"
         binding.tvOffsetValue.text = "${config.timeOffsetSeconds} 秒"
@@ -158,6 +186,18 @@ class MainActivity : AppCompatActivity() {
         binding.tvMode.text = "控制按钮：${if (config.showControlButtons) "开启" else "关闭"}"
         renderPreviewStyle()
         renderPreviewTime()
+    }
+
+    private fun renderAutoConfig() {
+        binding.tvAutoIntervalValue.text = "${autoConfig.intervalMs} ms"
+        binding.tvAutoHoldValue.text = "${autoConfig.holdMs} ms"
+        binding.tvAutoSwipeValue.text = "${autoConfig.swipeMs} ms"
+        binding.tvAutoPinchValue.text = "${autoConfig.pinchMs} ms"
+        binding.tvAutoRepeatValue.text = "${autoConfig.repeatCount} 次"
+        binding.tvAutoDelayValue.text = "${autoConfig.delayStartSec} 秒"
+        binding.tvAutoLoopValue.text = "${autoConfig.loopIntervalMs} ms"
+        binding.tvAutoStatus.text = if (autoRunning) "状态：运行中" else "状态：未启动"
+        binding.btnAutoStart.text = if (autoRunning) "停止自动点击器" else "启动自动点击器"
     }
 
     private fun renderPreviewStyle() {
@@ -209,6 +249,16 @@ class MainActivity : AppCompatActivity() {
             ErrorStore.save(this, msg)
             renderLastError()
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun toggleAutoClicker() {
+        autoRunning = !autoRunning
+        renderAutoConfig()
+        if (autoRunning) {
+            Toast.makeText(this, if (autoConfig.delayStartSec > 0) "已设置倒计时启动" else "自动点击器已启动（模拟）", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "自动点击器已停止（模拟）", Toast.LENGTH_SHORT).show()
         }
     }
 

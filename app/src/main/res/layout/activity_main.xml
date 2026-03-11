@@ -412,11 +412,313 @@
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/tvAutoClickerHint"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="动作默认设置"
+                    android:textColor="#111827"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="当前为骨架版，后续可继续加入点击坐标、频率和启动/停止逻辑。"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="动作间隔"
+                        android:textColor="#111827"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoIntervalMinus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="-" />
+
+                    <TextView
+                        android:id="@+id/tvAutoIntervalValue"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="50 ms"
+                        android:textColor="#2563EB"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoIntervalPlus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="+" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="按住持续"
+                        android:textColor="#111827"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoHoldMinus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="-" />
+
+                    <TextView
+                        android:id="@+id/tvAutoHoldValue"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="50 ms"
+                        android:textColor="#2563EB"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoHoldPlus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="+" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="轻扫持续"
+                        android:textColor="#111827"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoSwipeMinus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="-" />
+
+                    <TextView
+                        android:id="@+id/tvAutoSwipeValue"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="300 ms"
+                        android:textColor="#2563EB"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoSwipePlus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="+" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="缩放持续"
+                        android:textColor="#111827"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoPinchMinus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="-" />
+
+                    <TextView
+                        android:id="@+id/tvAutoPinchValue"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="3000 ms"
+                        android:textColor="#2563EB"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoPinchPlus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="+" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="执行次数"
+                        android:textColor="#111827"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoRepeatMinus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="-" />
+
+                    <TextView
+                        android:id="@+id/tvAutoRepeatValue"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="1 次"
+                        android:textColor="#2563EB"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoRepeatPlus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="+" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnAutoReset"
+                    android:layout_width="match_parent"
+                    android:layout_height="42dp"
+                    android:layout_marginTop="12dp"
+                    android:text="恢复默认值"
+                    android:textAllCaps="false" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="定时启动"
+                    android:textColor="#111827"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="延迟启动"
+                        android:textColor="#111827"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoDelayMinus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="-" />
+
+                    <TextView
+                        android:id="@+id/tvAutoDelayValue"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="0 秒"
+                        android:textColor="#2563EB"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoDelayPlus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="+" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:text="脚本循环"
+                    android:textColor="#111827"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="循环间隔"
+                        android:textColor="#111827"
+                        android:textSize="15sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoLoopMinus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="-" />
+
+                    <TextView
+                        android:id="@+id/tvAutoLoopValue"
+                        android:layout_width="100dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text="0 ms"
+                        android:textColor="#2563EB"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/btnAutoLoopPlus"
+                        android:layout_width="42dp"
+                        android:layout_height="36dp"
+                        android:text="+" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnAutoStart"
+                    android:layout_width="match_parent"
+                    android:layout_height="46dp"
+                    android:layout_marginTop="16dp"
+                    android:text="启动自动点击器"
+                    android:textAllCaps="false" />
+
+                <TextView
+                    android:id="@+id/tvAutoStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="状态：未启动"
                     android:textColor="#6B7280"
                     android:textSize="13sp" />
             </LinearLayout>
