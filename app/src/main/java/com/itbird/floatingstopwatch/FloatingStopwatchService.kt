@@ -146,9 +146,29 @@ class FloatingStopwatchService : Service() {
         binding?.tvMinimizedTime?.typeface = typeface
         binding?.tvTime?.setTextSize(TypedValue.COMPLEX_UNIT_SP, config.fontSizeSp.toFloat())
         binding?.tvMinimizedTime?.setTextSize(TypedValue.COMPLEX_UNIT_SP, max(16, config.fontSizeSp - 6).toFloat())
+        applyFixedWidth()
         val visible = if (config.showControlButtons) View.VISIBLE else View.GONE
         binding?.btnClose?.visibility = visible
         binding?.btnMinimize?.visibility = visible
+    }
+
+    private fun applyFixedWidth() {
+        val pattern = OverlayConfigStore.formatOptions[config.formatIndex]
+        val sample = when (pattern) {
+            "HH:mm:ss.SSS" -> "88:88:88.888"
+            "mm:ss.SS" -> "88:88.88"
+            else -> "88:88:88.8"
+        }
+        val dm = resources.displayMetrics
+        val maxWidth = (dm.widthPixels * 0.9f).toInt()
+        binding?.tvTime?.let { tv ->
+            val width = tv.paint.measureText(sample).toInt() + tv.paddingLeft + tv.paddingRight
+            tv.minWidth = width.coerceAtMost(maxWidth)
+        }
+        binding?.tvMinimizedTime?.let { tv ->
+            val width = tv.paint.measureText(sample).toInt() + tv.paddingLeft + tv.paddingRight
+            tv.minWidth = width.coerceAtMost(maxWidth)
+        }
     }
 
     private fun updateTime() {
