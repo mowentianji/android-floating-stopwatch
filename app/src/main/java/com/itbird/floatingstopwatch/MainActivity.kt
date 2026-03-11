@@ -58,6 +58,7 @@ class MainActivity : AppCompatActivity() {
         renderLastError()
         handler.removeCallbacks(previewTicker)
         handler.post(previewTicker)
+        binding.btnStartOverlay.text = if (FloatingStopwatchService.isRunning) "关闭悬浮窗" else "开启悬浮窗"
     }
 
     override fun onPause() {
@@ -114,7 +115,7 @@ class MainActivity : AppCompatActivity() {
             config = config.copy(fontSizeSp = min(48, config.fontSizeSp + 2))
             saveAndRender()
         }
-        binding.btnStartOverlay.setOnClickListener { launchOverlay() }
+        binding.btnStartOverlay.setOnClickListener { toggleOverlay() }
         showPage(MainPage.STOPWATCH)
     }
 
@@ -182,7 +183,14 @@ class MainActivity : AppCompatActivity() {
         binding.tvSources.text = "时间偏移：${config.timeOffsetSeconds} 秒；声音提醒：${if (config.soundEnabled) "开启" else "关闭"}"
     }
 
-    private fun launchOverlay() {
+    private fun toggleOverlay() {
+        if (FloatingStopwatchService.isRunning) {
+            stopService(Intent(this, FloatingStopwatchService::class.java))
+            FloatingStopwatchService.isRunning = false
+            binding.btnStartOverlay.text = "开启悬浮窗"
+            Toast.makeText(this, "已关闭悬浮窗", Toast.LENGTH_SHORT).show()
+            return
+        }
         if (!Settings.canDrawOverlays(this)) {
             Toast.makeText(this, "请先允许悬浮窗权限，已自动跳转", Toast.LENGTH_SHORT).show()
             startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName")))
@@ -191,6 +199,8 @@ class MainActivity : AppCompatActivity() {
         try {
             val intent = Intent(this, FloatingStopwatchService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
+            FloatingStopwatchService.isRunning = true
+            binding.btnStartOverlay.text = "关闭悬浮窗"
             ErrorStore.clear(this)
             renderLastError()
             Toast.makeText(this, "已开启时间悬浮窗", Toast.LENGTH_SHORT).show()
@@ -200,6 +210,10 @@ class MainActivity : AppCompatActivity() {
             renderLastError()
             Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun launchOverlay() {
+        toggleOverlay()
     }
 
     private fun formatCountdown(remainMs: Long, pattern: String): String {

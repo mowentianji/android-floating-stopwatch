@@ -52,6 +52,7 @@ class FloatingStopwatchService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        isRunning = true
         config = OverlayConfigStore.load(this)
         if (config.countdownEnabled) countdownEndAtMs = System.currentTimeMillis() + config.countdownMinutes * 60_000L
         try {
@@ -68,6 +69,7 @@ class FloatingStopwatchService : Service() {
         runCatching { overlayView?.let { windowManager.removeView(it) } }
         overlayView = null
         binding = null
+        isRunning = false
         super.onDestroy()
     }
 
@@ -267,6 +269,8 @@ class FloatingStopwatchService : Service() {
     }
 
     companion object {
+        @Volatile
+        var isRunning: Boolean = false
         private const val CHANNEL_ID = "floating_stopwatch_channel"
         private const val NOTIFICATION_ID = 1001
     }
