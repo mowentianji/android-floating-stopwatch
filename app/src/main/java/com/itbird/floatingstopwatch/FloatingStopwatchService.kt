@@ -1,4 +1,4 @@
-package com.example.floatingstopwatch
+package com.itbird.floatingstopwatch
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -23,7 +23,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import com.example.floatingstopwatch.databinding.OverlayStopwatchBinding
+import com.itbird.floatingstopwatch.databinding.OverlayStopwatchBinding
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -44,7 +44,7 @@ class FloatingStopwatchService : Service() {
     private val ticker = object : Runnable {
         override fun run() {
             updateTime()
-            handler.postDelayed(this, 50)
+            handler.postDelayed(this, 100)
         }
     }
 

@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.floatingstopwatch"
+    namespace = "com.itbird.floatingstopwatch"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.floatingstopwatch"
+        applicationId = "com.itbird.floatingstopwatch"
         minSdk = 26
         targetSdk = 34
         versionCode = 1

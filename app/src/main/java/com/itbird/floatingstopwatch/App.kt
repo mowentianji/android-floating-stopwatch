@@ -1,4 +1,4 @@
-package com.example.floatingstopwatch
+package com.itbird.floatingstopwatch
 
 import android.app.Application
 
