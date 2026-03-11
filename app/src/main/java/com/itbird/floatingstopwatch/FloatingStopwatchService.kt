@@ -44,7 +44,7 @@ class FloatingStopwatchService : Service() {
     private val ticker = object : Runnable {
         override fun run() {
             updateTime()
-            handler.postDelayed(this, 100)
+            handler.postDelayed(this, 50)
         }
     }
 
