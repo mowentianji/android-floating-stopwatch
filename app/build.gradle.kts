@@ -1,3 +1,5 @@
+import com.android.build.api.variant.ApkVariantOutput
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -56,8 +58,10 @@ android {
 
 androidComponents {
     onVariants { variant ->
+        val name = variant.name
+        val version = variant.versionName.orNull ?: "0.0.2"
         variant.outputs.forEach { output ->
-            output.outputFileName.set("floating-stopwatch-${variant.name}-${variant.versionName.get()}.apk")
+            (output as? ApkVariantOutput)?.outputFileName?.set("floating-stopwatch-$name-$version.apk")
         }
     }
 }
