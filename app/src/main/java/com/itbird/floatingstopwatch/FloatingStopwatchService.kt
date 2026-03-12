@@ -174,6 +174,11 @@ class FloatingStopwatchService : Service() {
             val width = tv.paint.measureText(sample).toInt() + tv.paddingLeft + tv.paddingRight
             tv.minWidth = width.coerceAtMost(maxWidth)
         }
+        binding?.tvCountdown?.let { tv ->
+            val sampleLabel = "剩余 88:88"
+            val width = tv.paint.measureText(sampleLabel).toInt() + tv.paddingLeft + tv.paddingRight
+            tv.minWidth = width.coerceAtMost(maxWidth)
+        }
     }
 
     private fun updateTime() {
@@ -227,6 +232,12 @@ class FloatingStopwatchService : Service() {
     }
 
     private fun playTone() {
+        val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        val ringer = audioManager.ringerMode
+        if (ringer == AudioManager.RINGER_MODE_SILENT) {
+            Toast.makeText(this, "当前静音模式，无法播放提示音", Toast.LENGTH_SHORT).show()
+            return
+        }
         runCatching {
             ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 180)
             return
