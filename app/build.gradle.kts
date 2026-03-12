@@ -15,8 +15,6 @@ android {
         versionName = "0.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        setProperty("archivesBaseName", "floating-stopwatch-${versionName}")
     }
 
     signingConfigs {
@@ -53,6 +51,14 @@ android {
 
     buildFeatures {
         viewBinding = true
+    }
+}
+
+androidComponents {
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("floating-stopwatch-${variant.name}-${variant.versionName.get()}.apk")
+        }
     }
 }
 
