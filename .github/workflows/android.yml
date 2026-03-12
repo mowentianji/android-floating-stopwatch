@@ -56,8 +56,9 @@ jobs:
 
       - name: Rename debug APK
         run: |
+          VERSION_NAME=$(grep -m1 "versionName" app/build.gradle.kts | sed -E 's/.*versionName = "([^"]+)".*/\1/')
           APK=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
-          NEW_NAME="floating-stopwatch-debug-0.0.2.apk"
+          NEW_NAME="floating-stopwatch-debug-${VERSION_NAME}.apk"
           cp "$APK" "app/build/outputs/apk/debug/$NEW_NAME"
 
       - name: Upload debug APK
