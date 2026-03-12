@@ -38,6 +38,7 @@ class FloatingStopwatchService : Service() {
     private var config = OverlayConfig()
     private var countdownEndAtMs: Long? = null
     private var lastCountdownAlert = false
+    private var lastCountdownMinutes: Int = -1
     private var lastHourlyAlertHour = -1
 
     private val handler by lazy { Handler(Looper.getMainLooper()) }
@@ -176,6 +177,17 @@ class FloatingStopwatchService : Service() {
     private fun updateTime() {
         applyConfigToViews()
         val now = System.currentTimeMillis() + config.timeOffsetSeconds * 1000L
+        if (config.countdownEnabled) {
+            if (countdownEndAtMs == null || lastCountdownMinutes != config.countdownMinutes) {
+                countdownEndAtMs = now + config.countdownMinutes * 60_000L
+                lastCountdownMinutes = config.countdownMinutes
+                lastCountdownAlert = false
+            }
+        } else {
+            countdownEndAtMs = null
+            lastCountdownMinutes = -1
+            lastCountdownAlert = false
+        }
         val text = if (config.countdownEnabled) {
             val remain = max(0L, (countdownEndAtMs ?: now) - now)
             formatCountdown(remain, OverlayConfigStore.formatOptions[config.formatIndex])
@@ -215,7 +227,15 @@ class FloatingStopwatchService : Service() {
         runCatching {
             ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 180)
         }.onFailure {
-            Toast.makeText(this, "声音提醒失败", Toast.LENGTH_SHORT).show()
+            runCatching {
+                ToneGenerator(AudioManager.STREAM_ALARM, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 200)
+            }.onFailure {
+                runCatching {
+                    ToneGenerator(AudioManager.STREAM_MUSIC, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 200)
+                }.onFailure {
+                    Toast.makeText(this, "声音提醒失败", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
     }
 
