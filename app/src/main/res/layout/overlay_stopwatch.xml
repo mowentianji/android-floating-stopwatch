@@ -12,6 +12,7 @@
         android:id="@+id/fullContent"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:baselineAligned="false"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -19,6 +20,7 @@
             android:id="@+id/tvTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:includeFontPadding="false"
             android:text="00:00:00.0"
             android:textColor="#F9FAFB"
             android:textSize="26sp"
@@ -77,6 +79,7 @@
             android:id="@+id/tvMinimizedTime"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:includeFontPadding="false"
             android:text="00:00:00.0"
             android:textColor="#F9FAFB"
             android:textSize="18sp"
