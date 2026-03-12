@@ -169,15 +169,18 @@ class FloatingStopwatchService : Service() {
         binding?.tvTime?.let { tv ->
             val width = tv.paint.measureText(sample).toInt() + tv.paddingLeft + tv.paddingRight
             tv.minWidth = width.coerceAtMost(maxWidth)
+            tv.maxWidth = width.coerceAtMost(maxWidth)
         }
         binding?.tvMinimizedTime?.let { tv ->
             val width = tv.paint.measureText(sample).toInt() + tv.paddingLeft + tv.paddingRight
             tv.minWidth = width.coerceAtMost(maxWidth)
+            tv.maxWidth = width.coerceAtMost(maxWidth)
         }
         binding?.tvCountdown?.let { tv ->
             val sampleLabel = "剩余 88:88"
             val width = tv.paint.measureText(sampleLabel).toInt() + tv.paddingLeft + tv.paddingRight
             tv.minWidth = width.coerceAtMost(maxWidth)
+            tv.maxWidth = width.coerceAtMost(maxWidth)
         }
     }
 
