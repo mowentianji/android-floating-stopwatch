@@ -182,7 +182,7 @@ class FloatingStopwatchService : Service() {
             tv.setLineSpacing(0f, 1f)
         }
         binding?.tvCountdown?.let { tv ->
-            val sampleLabel = "剩余 88:88"
+            val sampleLabel = "倒计时中"
             val width = tv.paint.measureText(sampleLabel).toInt() + tv.paddingLeft + tv.paddingRight
             tv.minWidth = width.coerceAtMost(maxWidth)
             tv.maxWidth = width.coerceAtMost(maxWidth)
@@ -215,8 +215,7 @@ class FloatingStopwatchService : Service() {
         binding?.tvMinimizedTime?.text = text
         binding?.tvCountdown?.apply {
             setText(if (config.countdownEnabled) {
-                val remain = max(0L, (countdownEndAtMs ?: now) - now)
-                formatRemainLabel(remain)
+                "倒计时中"
             } else {
                 ""
             })
