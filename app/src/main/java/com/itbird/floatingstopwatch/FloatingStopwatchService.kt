@@ -181,6 +181,8 @@ class FloatingStopwatchService : Service() {
             val width = tv.paint.measureText(sampleLabel).toInt() + tv.paddingLeft + tv.paddingRight
             tv.minWidth = width.coerceAtMost(maxWidth)
             tv.maxWidth = width.coerceAtMost(maxWidth)
+            tv.setLineSpacing(0f, 1f)
+            tv.includeFontPadding = false
         }
     }
 
