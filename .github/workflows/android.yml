@@ -54,6 +54,12 @@ jobs:
       - name: Build debug APK
         run: gradle assembleDebug --no-daemon
 
+      - name: Rename debug APK
+        run: |
+          APK=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
+          NEW_NAME="floating-stopwatch-debug-0.0.2.apk"
+          cp "$APK" "app/build/outputs/apk/debug/$NEW_NAME"
+
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
