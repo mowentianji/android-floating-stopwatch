@@ -24,7 +24,10 @@
             android:text="00:00:00.0"
             android:textColor="#F9FAFB"
             android:textSize="26sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:ems="10"
+            android:gravity="center" />
 
         <TextView
             android:id="@+id/tvCountdown"
@@ -83,7 +86,10 @@
             android:text="00:00:00.0"
             android:textColor="#F9FAFB"
             android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:fontFamily="monospace"
+            android:ems="10"
+            android:gravity="center" />
 
         <Button
             android:id="@+id/btnRestore"
