@@ -11,6 +11,7 @@ import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.media.AudioManager
 import android.media.ToneGenerator
+import android.media.RingtoneManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -226,17 +227,25 @@ class FloatingStopwatchService : Service() {
     private fun playTone() {
         runCatching {
             ToneGenerator(AudioManager.STREAM_NOTIFICATION, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 180)
-        }.onFailure {
-            runCatching {
-                ToneGenerator(AudioManager.STREAM_ALARM, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 200)
-            }.onFailure {
-                runCatching {
-                    ToneGenerator(AudioManager.STREAM_MUSIC, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 200)
-                }.onFailure {
-                    Toast.makeText(this, "声音提醒失败", Toast.LENGTH_SHORT).show()
-                }
-            }
+            return
         }
+        runCatching {
+            ToneGenerator(AudioManager.STREAM_ALARM, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 200)
+            return
+        }
+        runCatching {
+            ToneGenerator(AudioManager.STREAM_MUSIC, 90).startTone(ToneGenerator.TONE_PROP_BEEP, 200)
+            return
+        }
+        runCatching {
+            val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+                ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
+            val ringtone = RingtoneManager.getRingtone(applicationContext, uri)
+            ringtone?.play()
+            return
+        }
+        Toast.makeText(this, "声音提醒失败", Toast.LENGTH_SHORT).show()
     }
 
     private fun formatCountdown(remainMs: Long, pattern: String): String {
