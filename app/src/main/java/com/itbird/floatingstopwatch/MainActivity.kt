@@ -66,7 +66,11 @@ class MainActivity : AppCompatActivity() {
         handler.removeCallbacks(previewTicker)
         handler.post(previewTicker)
         binding.btnStartOverlay.text = if (FloatingStopwatchService.isRunning) "关闭悬浮窗" else "开启悬浮窗"
-        registerReceiver(overlayStateReceiver, android.content.IntentFilter(FloatingStopwatchService.ACTION_OVERLAY_CLOSED))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(overlayStateReceiver, android.content.IntentFilter(FloatingStopwatchService.ACTION_OVERLAY_CLOSED), RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(overlayStateReceiver, android.content.IntentFilter(FloatingStopwatchService.ACTION_OVERLAY_CLOSED))
+        }
     }
 
     override fun onPause() {
