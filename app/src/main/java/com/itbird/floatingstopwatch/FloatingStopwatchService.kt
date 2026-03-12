@@ -208,11 +208,14 @@ class FloatingStopwatchService : Service() {
         }
         binding?.tvTime?.text = text
         binding?.tvMinimizedTime?.text = text
-        binding?.tvCountdown?.text = if (config.countdownEnabled) {
-            val remain = max(0L, (countdownEndAtMs ?: now) - now)
-            "剩余 ${formatRemainLabel(remain)}"
-        } else {
-            "普通时间"
+        binding?.tvCountdown?.apply {
+            text = if (config.countdownEnabled) {
+                val remain = max(0L, (countdownEndAtMs ?: now) - now)
+                "剩余 ${formatRemainLabel(remain)}"
+            } else {
+                ""
+            }
+            visibility = if (config.countdownEnabled) View.VISIBLE else View.GONE
         }
         applyFixedWidth()
         maybePlayReminder(now)

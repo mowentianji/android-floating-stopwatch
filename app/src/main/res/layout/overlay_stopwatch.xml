@@ -31,9 +31,10 @@
             android:layout_marginStart="8dp"
             android:includeFontPadding="false"
             android:singleLine="true"
-            android:text="普通时间"
+            android:text=""
             android:textColor="#60A5FA"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:visibility="gone" />
 
         <Button
             android:id="@+id/btnMinimize"
