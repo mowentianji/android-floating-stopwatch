@@ -41,6 +41,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private val overlayStateReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            if (intent?.action != FloatingStopwatchService.ACTION_OVERLAY_CLOSED) return
+            binding.btnStartOverlay.text = "开启悬浮窗"
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -59,10 +66,12 @@ class MainActivity : AppCompatActivity() {
         handler.removeCallbacks(previewTicker)
         handler.post(previewTicker)
         binding.btnStartOverlay.text = if (FloatingStopwatchService.isRunning) "关闭悬浮窗" else "开启悬浮窗"
+        registerReceiver(overlayStateReceiver, android.content.IntentFilter(FloatingStopwatchService.ACTION_OVERLAY_CLOSED))
     }
 
     override fun onPause() {
         handler.removeCallbacks(previewTicker)
+        unregisterReceiver(overlayStateReceiver)
         super.onPause()
     }
 

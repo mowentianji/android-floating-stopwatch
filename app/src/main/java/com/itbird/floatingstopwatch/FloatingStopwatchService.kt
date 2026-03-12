@@ -73,6 +73,7 @@ class FloatingStopwatchService : Service() {
         overlayView = null
         binding = null
         isRunning = false
+        sendBroadcast(Intent(ACTION_OVERLAY_CLOSED))
         super.onDestroy()
     }
 
@@ -323,6 +324,7 @@ class FloatingStopwatchService : Service() {
     }
 
     companion object {
+        const val ACTION_OVERLAY_CLOSED = "com.itbird.floatingstopwatch.ACTION_OVERLAY_CLOSED"
         @Volatile
         var isRunning: Boolean = false
         private const val CHANNEL_ID = "floating_stopwatch_channel"
