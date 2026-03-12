@@ -216,7 +216,7 @@ class FloatingStopwatchService : Service() {
         binding?.tvCountdown?.apply {
             setText(if (config.countdownEnabled) {
                 val remain = max(0L, (countdownEndAtMs ?: now) - now)
-                "剩余 ${formatRemainLabel(remain)}"
+                formatRemainLabel(remain)
             } else {
                 ""
             })
