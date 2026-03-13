@@ -167,6 +167,8 @@ class FloatingStopwatchService : Service() {
         }
         val dm = resources.displayMetrics
         val maxWidth = (dm.widthPixels * 0.9f).toInt()
+        val density = dm.density
+        var countdownWidth = 0
         binding?.tvTime?.let { tv ->
             val width = tv.paint.measureText(sample).toInt() + tv.paddingLeft + tv.paddingRight
             tv.minWidth = width.coerceAtMost(maxWidth)
@@ -182,12 +184,18 @@ class FloatingStopwatchService : Service() {
             tv.setLineSpacing(0f, 1f)
         }
         binding?.tvCountdown?.let { tv ->
-            val sampleLabel = "倒计时中"
-            val width = tv.paint.measureText(sampleLabel).toInt() + tv.paddingLeft + tv.paddingRight
-            tv.minWidth = width.coerceAtMost(maxWidth)
-            tv.maxWidth = width.coerceAtMost(maxWidth)
+            val sampleLabel = "88:88"
+            countdownWidth = tv.paint.measureText(sampleLabel).toInt() + tv.paddingLeft + tv.paddingRight
+            tv.minWidth = countdownWidth.coerceAtMost(maxWidth)
+            tv.maxWidth = countdownWidth.coerceAtMost(maxWidth)
             tv.setLineSpacing(0f, 1f)
             tv.includeFontPadding = false
+        }
+        binding?.fullContent?.let { container ->
+            val timeWidth = binding?.tvTime?.minWidth ?: 0
+            val buttonsWidth = ((52 + 52 + 8 + 6) * density).toInt()
+            val totalWidth = timeWidth + countdownWidth + buttonsWidth
+            container.minimumWidth = totalWidth.coerceAtMost(maxWidth)
         }
     }
 
