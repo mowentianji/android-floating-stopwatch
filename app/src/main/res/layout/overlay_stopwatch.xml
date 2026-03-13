@@ -29,17 +29,19 @@
             android:ems="10"
             android:gravity="center" />
 
-        <TextView
-            android:id="@+id/tvCountdown"
-            android:layout_width="wrap_content"
-            android:layout_height="14dp"
+        <Button
+            android:id="@+id/btnResetCountdown"
+            android:layout_width="52dp"
+            android:layout_height="32dp"
             android:layout_marginStart="8dp"
-            android:includeFontPadding="false"
-            android:singleLine="true"
-            android:text=""
+            android:background="@drawable/overlay_button_secondary"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:text="重置"
+            android:textAllCaps="false"
             android:textColor="#60A5FA"
-            android:textSize="12sp"
-            android:visibility="gone" />
+            android:textSize="10sp" />
 
         <Button
             android:id="@+id/btnMinimize"

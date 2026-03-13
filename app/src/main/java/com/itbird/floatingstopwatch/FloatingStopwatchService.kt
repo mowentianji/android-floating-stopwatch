@@ -183,13 +183,11 @@ class FloatingStopwatchService : Service() {
             tv.includeFontPadding = false
             tv.setLineSpacing(0f, 1f)
         }
-        binding?.tvCountdown?.let { tv ->
-            val sampleLabel = "88:88"
-            countdownWidth = tv.paint.measureText(sampleLabel).toInt() + tv.paddingLeft + tv.paddingRight
-            tv.minWidth = countdownWidth.coerceAtMost(maxWidth)
-            tv.maxWidth = countdownWidth.coerceAtMost(maxWidth)
-            tv.setLineSpacing(0f, 1f)
-            tv.includeFontPadding = false
+        binding?.btnResetCountdown?.let { btn ->
+            val width = ((52) * density).toInt()
+            countdownWidth = width
+            btn.minWidth = width.coerceAtMost(maxWidth)
+            btn.maxWidth = width.coerceAtMost(maxWidth)
         }
         binding?.fullContent?.let { container ->
             val timeWidth = binding?.tvTime?.minWidth ?: 0
@@ -221,13 +219,16 @@ class FloatingStopwatchService : Service() {
         }
         binding?.tvTime?.text = text
         binding?.tvMinimizedTime?.text = text
-        binding?.tvCountdown?.apply {
-            setText(if (config.countdownEnabled) {
-                "倒计时中"
-            } else {
-                ""
-            })
-            visibility = if (config.countdownEnabled) View.VISIBLE else View.GONE
+        binding?.btnResetCountdown?.let { btn ->
+            btn.visibility = if (config.countdownEnabled) View.VISIBLE else View.GONE
+        }
+        binding?.btnResetCountdown?.setOnClickListener {
+            if (config.countdownEnabled) {
+                countdownEndAtMs = System.currentTimeMillis() + config.countdownMinutes * 60_000L
+                lastCountdownMinutes = config.countdownMinutes
+                lastCountdownAlert = false
+                updateTime()
+            }
         }
         applyFixedWidth()
         maybePlayReminder(now)
