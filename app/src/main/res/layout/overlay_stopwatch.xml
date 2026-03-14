@@ -10,7 +10,7 @@
 
     <LinearLayout
         android:id="@+id/fullContent"
-        android:layout_width="wrap_content"
+        android:layout_width="320dp"
         android:layout_height="wrap_content"
         android:baselineAligned="false"
         android:gravity="center_vertical"
@@ -18,8 +18,9 @@
 
         <TextView
             android:id="@+id/tvTime"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:includeFontPadding="false"
             android:singleLine="true"
             android:maxLines="1"
@@ -85,8 +86,9 @@
 
         <TextView
             android:id="@+id/tvMinimizedTime"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:includeFontPadding="false"
             android:singleLine="true"
             android:maxLines="1"
