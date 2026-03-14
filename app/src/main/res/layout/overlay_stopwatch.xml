@@ -47,6 +47,20 @@
             android:textSize="10sp" />
 
         <Button
+            android:id="@+id/btnPauseResume"
+            android:layout_width="52dp"
+            android:layout_height="32dp"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/overlay_button_secondary"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:minWidth="0dp"
+            android:text="暂停"
+            android:textAllCaps="false"
+            android:textColor="#E5EDFF"
+            android:textSize="10sp" />
+
+        <Button
             android:id="@+id/btnMinimize"
             android:layout_width="52dp"
             android:layout_height="32dp"

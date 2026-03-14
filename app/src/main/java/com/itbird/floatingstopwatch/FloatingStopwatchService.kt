@@ -42,6 +42,7 @@ class FloatingStopwatchService : Service() {
     private var lastCountdownAlert = false
     private var lastCountdownMinutes: Int = -1
     private var lastHourlyAlertHour = -1
+    private var countdownPausedAtMs: Long? = null
 
     private val handler by lazy { Handler(Looper.getMainLooper()) }
     private val ticker = object : Runnable {
@@ -102,6 +103,7 @@ class FloatingStopwatchService : Service() {
         binding?.btnClose?.setOnClickListener { stopSelf() }
         binding?.btnMinimize?.setOnClickListener { setMinimized(true) }
         binding?.btnRestore?.setOnClickListener { setMinimized(false) }
+        binding?.btnPauseResume?.setOnClickListener { toggleCountdownPause() }
         setupDrag(view, params)
         applyConfigToViews()
         updateTime()
@@ -140,6 +142,20 @@ class FloatingStopwatchService : Service() {
         binding?.minimizedContent?.visibility = if (minimized) View.VISIBLE else View.GONE
     }
 
+    private fun toggleCountdownPause() {
+        if (!config.countdownEnabled) return
+        val now = System.currentTimeMillis() + config.timeOffsetSeconds * 1000L
+        if (countdownPausedAtMs == null) {
+            val remain = max(0L, (countdownEndAtMs ?: now) - now)
+            countdownPausedAtMs = now + remain
+        } else {
+            val remain = max(0L, (countdownPausedAtMs ?: now) - now)
+            countdownEndAtMs = now + remain
+            countdownPausedAtMs = null
+        }
+        updateTime()
+    }
+
     private fun applyConfigToViews() {
         config = OverlayConfigStore.load(this)
         val bgColor = OverlayConfigStore.backgroundOptions[config.backgroundIndex].second
@@ -155,7 +171,9 @@ class FloatingStopwatchService : Service() {
         applyFixedWidth()
         val visible = if (config.showControlButtons) View.VISIBLE else View.GONE
         binding?.btnClose?.visibility = visible
-        binding?.btnMinimize?.visibility = visible
+        binding?.btnMinimize?.visibility = if (config.countdownEnabled) View.GONE else visible
+        binding?.btnPauseResume?.visibility = if (config.countdownEnabled) View.VISIBLE else View.GONE
+        binding?.btnPauseResume?.text = if (countdownPausedAtMs != null) "恢复" else "暂停"
     }
 
     private fun applyFixedWidth() {
@@ -172,7 +190,11 @@ class FloatingStopwatchService : Service() {
         val spacingUnit = (8 * density).toInt() + (6 * density).toInt()
         val showControls = config.showControlButtons
         val showReset = config.countdownEnabled
-        val buttonsWidth = (if (showControls) buttonUnit * 2 + spacingUnit else 0) + if (showReset) buttonUnit + (if (showControls) (8 * density).toInt() else 0) else 0
+        val showPause = config.countdownEnabled
+        val buttonsWidth =
+            (if (showControls) buttonUnit + (6 * density).toInt() else 0) +
+            (if (showReset) buttonUnit + (8 * density).toInt() else 0) +
+            (if (showPause) buttonUnit + (6 * density).toInt() else 0)
         binding?.tvTime?.let { tv ->
             val width = tv.paint.measureText(sample).toInt() + tv.paddingLeft + tv.paddingRight
             val extra = (21 * density).toInt()
@@ -189,6 +211,11 @@ class FloatingStopwatchService : Service() {
             tv.setLineSpacing(0f, 1f)
         }
         binding?.btnResetCountdown?.let { btn ->
+            val width = buttonUnit
+            btn.minWidth = width.coerceAtMost(maxWidth)
+            btn.maxWidth = width.coerceAtMost(maxWidth)
+        }
+        binding?.btnPauseResume?.let { btn ->
             val width = buttonUnit
             btn.minWidth = width.coerceAtMost(maxWidth)
             btn.maxWidth = width.coerceAtMost(maxWidth)
@@ -211,14 +238,16 @@ class FloatingStopwatchService : Service() {
                 countdownEndAtMs = now + config.countdownMinutes * 60_000L
                 lastCountdownMinutes = config.countdownMinutes
                 lastCountdownAlert = false
+                countdownPausedAtMs = null
             }
         } else {
             countdownEndAtMs = null
             lastCountdownMinutes = -1
             lastCountdownAlert = false
+            countdownPausedAtMs = null
         }
         val text = if (config.countdownEnabled) {
-            val remain = max(0L, (countdownEndAtMs ?: now) - now)
+            val remain = max(0L, (countdownPausedAtMs ?: (countdownEndAtMs ?: now)) - now)
             formatCountdown(remain, OverlayConfigStore.formatOptions[config.formatIndex])
         } else {
             SimpleDateFormat(OverlayConfigStore.formatOptions[config.formatIndex], Locale.getDefault()).format(Date(now))
@@ -228,11 +257,16 @@ class FloatingStopwatchService : Service() {
         binding?.btnResetCountdown?.let { btn ->
             btn.visibility = if (config.countdownEnabled) View.VISIBLE else View.GONE
         }
+        binding?.btnPauseResume?.let { btn ->
+            btn.visibility = if (config.countdownEnabled) View.VISIBLE else View.GONE
+            btn.text = if (countdownPausedAtMs != null) "恢复" else "暂停"
+        }
         binding?.btnResetCountdown?.setOnClickListener {
             if (config.countdownEnabled) {
                 countdownEndAtMs = System.currentTimeMillis() + config.countdownMinutes * 60_000L
                 lastCountdownMinutes = config.countdownMinutes
                 lastCountdownAlert = false
+                countdownPausedAtMs = null
                 updateTime()
             }
         }
