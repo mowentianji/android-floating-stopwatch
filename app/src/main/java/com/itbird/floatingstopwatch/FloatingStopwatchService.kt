@@ -194,8 +194,11 @@ class FloatingStopwatchService : Service() {
         val showControls = config.showControlButtons
         val showReset = config.countdownEnabled
         val showPause = config.countdownEnabled
+        val showMinimize = showControls && !config.countdownEnabled
+        val showClose = true
         val buttonsWidth =
-            (if (showControls) buttonUnit + (6 * density).toInt() else 0) +
+            (if (showClose) buttonUnit + (6 * density).toInt() else 0) +
+            (if (showMinimize) buttonUnit + (8 * density).toInt() else 0) +
             (if (showReset) buttonUnit + (8 * density).toInt() else 0) +
             (if (showPause) buttonUnit + (6 * density).toInt() else 0)
         binding?.tvTime?.let { tv ->
