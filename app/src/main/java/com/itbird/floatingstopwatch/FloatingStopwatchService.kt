@@ -173,7 +173,7 @@ class FloatingStopwatchService : Service() {
         binding?.tvMinimizedTime?.setTextSize(TypedValue.COMPLEX_UNIT_SP, max(16, config.fontSizeSp - 6).toFloat())
         applyFixedWidth()
         val visible = if (config.showControlButtons) View.VISIBLE else View.GONE
-        binding?.btnClose?.visibility = visible
+        binding?.btnClose?.visibility = View.VISIBLE
         binding?.btnMinimize?.visibility = if (config.countdownEnabled) View.GONE else visible
         binding?.btnPauseResume?.visibility = if (config.countdownEnabled) View.VISIBLE else View.GONE
         binding?.btnPauseResume?.text = if (countdownPausedRemainMs != null) "恢复" else "暂停"
