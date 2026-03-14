@@ -168,11 +168,15 @@ class FloatingStopwatchService : Service() {
         val dm = resources.displayMetrics
         val maxWidth = (dm.widthPixels * 0.9f).toInt()
         val density = dm.density
-        var countdownWidth = 0
+        val buttonUnit = (52 * density).toInt()
+        val spacingUnit = (8 * density).toInt() + (6 * density).toInt()
+        val showControls = config.showControlButtons
+        val showReset = config.countdownEnabled
+        val buttonsWidth = (if (showControls) buttonUnit * 2 + spacingUnit else 0) + if (showReset) buttonUnit + (if (showControls) (8 * density).toInt() else 0) else 0
         binding?.tvTime?.let { tv ->
             val width = tv.paint.measureText(sample).toInt() + tv.paddingLeft + tv.paddingRight
-            tv.minWidth = width.coerceAtMost(maxWidth)
-            tv.maxWidth = width.coerceAtMost(maxWidth)
+            tv.minWidth = width.coerceAtMost(maxWidth - buttonsWidth)
+            tv.maxWidth = width.coerceAtMost(maxWidth - buttonsWidth)
             tv.includeFontPadding = false
             tv.setLineSpacing(0f, 1f)
         }
@@ -184,16 +188,17 @@ class FloatingStopwatchService : Service() {
             tv.setLineSpacing(0f, 1f)
         }
         binding?.btnResetCountdown?.let { btn ->
-            val width = ((52) * density).toInt()
-            countdownWidth = width
+            val width = buttonUnit
             btn.minWidth = width.coerceAtMost(maxWidth)
             btn.maxWidth = width.coerceAtMost(maxWidth)
         }
         binding?.fullContent?.let { container ->
             val timeWidth = binding?.tvTime?.minWidth ?: 0
-            val buttonsWidth = ((52 + 52 + 8 + 6) * density).toInt()
-            val totalWidth = timeWidth + countdownWidth + buttonsWidth
+            val totalWidth = timeWidth + buttonsWidth
             container.minimumWidth = totalWidth.coerceAtMost(maxWidth)
+            container.layoutParams = container.layoutParams.apply {
+                width = totalWidth.coerceAtMost(maxWidth)
+            }
         }
     }
 
