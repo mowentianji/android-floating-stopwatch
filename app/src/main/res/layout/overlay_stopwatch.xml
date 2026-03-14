@@ -30,7 +30,7 @@
             android:textStyle="bold"
             android:fontFamily="monospace"
             android:ems="10"
-            android:gravity="center" />
+            android:gravity="start|center_vertical" />
 
         <Button
             android:id="@+id/btnResetCountdown"
@@ -111,7 +111,7 @@
             android:textStyle="bold"
             android:fontFamily="monospace"
             android:ems="10"
-            android:gravity="center" />
+            android:gravity="start|center_vertical" />
 
         <Button
             android:id="@+id/btnRestore"
