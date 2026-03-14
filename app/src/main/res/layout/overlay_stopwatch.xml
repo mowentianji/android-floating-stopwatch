@@ -38,7 +38,7 @@
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:minWidth="0dp"
-            android:text="重置"
+            android:text="重启"
             android:textAllCaps="false"
             android:textColor="#60A5FA"
             android:textSize="10sp" />
