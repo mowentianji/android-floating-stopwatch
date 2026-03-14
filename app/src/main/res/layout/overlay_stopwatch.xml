@@ -18,8 +18,9 @@
 
         <TextView
             android:id="@+id/tvTime"
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:includeFontPadding="false"
             android:singleLine="true"
             android:maxLines="1"
@@ -32,61 +33,69 @@
             android:ems="10"
             android:gravity="start|center_vertical" />
 
-        <Button
-            android:id="@+id/btnResetCountdown"
-            android:layout_width="52dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/overlay_button_secondary"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:minWidth="0dp"
-            android:text="重启"
-            android:textAllCaps="false"
-            android:textColor="#60A5FA"
-            android:textSize="10sp" />
+        <LinearLayout
+            android:id="@+id/buttonBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <Button
-            android:id="@+id/btnPauseResume"
-            android:layout_width="52dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/overlay_button_secondary"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:minWidth="0dp"
-            android:text="暂停"
-            android:textAllCaps="false"
-            android:textColor="#E5EDFF"
-            android:textSize="10sp" />
+            <Button
+                android:id="@+id/btnResetCountdown"
+                android:layout_width="52dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/overlay_button_secondary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:text="重启"
+                android:textAllCaps="false"
+                android:textColor="#60A5FA"
+                android:textSize="10sp" />
 
-        <Button
-            android:id="@+id/btnMinimize"
-            android:layout_width="52dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="8dp"
-            android:background="@drawable/overlay_button_secondary"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:minWidth="0dp"
-            android:text="最小化"
-            android:textAllCaps="false"
-            android:textColor="#E5EDFF"
-            android:textSize="10sp" />
+            <Button
+                android:id="@+id/btnPauseResume"
+                android:layout_width="52dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/overlay_button_secondary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:text="暂停"
+                android:textAllCaps="false"
+                android:textColor="#E5EDFF"
+                android:textSize="10sp" />
 
-        <Button
-            android:id="@+id/btnClose"
-            android:layout_width="52dp"
-            android:layout_height="32dp"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/overlay_button_secondary"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:minWidth="0dp"
-            android:text="关闭"
-            android:textAllCaps="false"
-            android:textColor="#FFB4B4"
-            android:textSize="10sp" />
+            <Button
+                android:id="@+id/btnMinimize"
+                android:layout_width="52dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/overlay_button_secondary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:text="最小化"
+                android:textAllCaps="false"
+                android:textColor="#E5EDFF"
+                android:textSize="10sp" />
+
+            <Button
+                android:id="@+id/btnClose"
+                android:layout_width="52dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="6dp"
+                android:background="@drawable/overlay_button_secondary"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:text="关闭"
+                android:textAllCaps="false"
+                android:textColor="#FFB4B4"
+                android:textSize="10sp" />
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
