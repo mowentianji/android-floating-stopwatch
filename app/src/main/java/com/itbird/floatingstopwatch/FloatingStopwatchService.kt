@@ -175,7 +175,7 @@ class FloatingStopwatchService : Service() {
         val buttonsWidth = (if (showControls) buttonUnit * 2 + spacingUnit else 0) + if (showReset) buttonUnit + (if (showControls) (8 * density).toInt() else 0) else 0
         binding?.tvTime?.let { tv ->
             val width = tv.paint.measureText(sample).toInt() + tv.paddingLeft + tv.paddingRight
-            val extra = (6 * density).toInt()
+            val extra = (21 * density).toInt()
             tv.minWidth = (width + extra).coerceAtMost(maxWidth - buttonsWidth)
             tv.maxWidth = (width + extra).coerceAtMost(maxWidth - buttonsWidth)
             tv.includeFontPadding = false
