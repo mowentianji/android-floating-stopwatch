@@ -176,7 +176,7 @@ class FloatingStopwatchService : Service() {
         binding?.btnClose?.visibility = visible
         binding?.btnMinimize?.visibility = if (config.countdownEnabled) View.GONE else visible
         binding?.btnPauseResume?.visibility = if (config.countdownEnabled) View.VISIBLE else View.GONE
-        binding?.btnPauseResume?.text = if (countdownPausedRemainMs != null) "恢复倒计时" else "暂停倒计时"
+        binding?.btnPauseResume?.text = if (countdownPausedRemainMs != null) "恢复" else "暂停"
     }
 
     private fun applyFixedWidth() {
@@ -268,7 +268,7 @@ class FloatingStopwatchService : Service() {
         }
         binding?.btnPauseResume?.let { btn ->
             btn.visibility = if (config.countdownEnabled) View.VISIBLE else View.GONE
-            btn.text = if (countdownPausedRemainMs != null) "恢复倒计时" else "暂停倒计时"
+            btn.text = if (countdownPausedRemainMs != null) "恢复" else "暂停"
         }
         binding?.btnResetCountdown?.setOnClickListener {
             if (config.countdownEnabled) {
